@@ -1,0 +1,4 @@
+*.py[cod]
+__cache__
+.vscode
+.DS_Store
