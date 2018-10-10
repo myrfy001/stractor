@@ -1,10 +1,39 @@
 # coding:utf-8
+
+from lxml import etree
+
 from html5_parser import parse
 
 import parsel
 import pprint
 from .exceptions import VersionNotSupport, DocumentTypeNotSupportedForQuerier
 from .selector import Selector
+from .transformer import Transformer
+
+NoneType = type(None)
+
+
+def object_to_dom(name, obj):
+
+    if isinstance(obj, dict):
+        node = etree.Element('dict')
+        node.set('name', name)
+        for k, v in obj.items():
+            node.append(object_to_dom(k, v))
+    elif isinstance(obj, list):
+        node = etree.Element('list')
+        node.set('name', name)
+        for item in obj:
+            node.append(object_to_dom(name, item))
+    elif isinstance(obj, (int, float, bool, str, NoneType)):
+        node = etree.Element('value')
+        node.text = str(obj)
+        node.set('name', name)
+        node.set('type', type(obj).__name__)
+    else:
+        raise Exception('Not Supported Json Type')
+
+    return node
 
 
 class Extractor:
@@ -12,6 +41,8 @@ class Extractor:
     def create_doc(cls, data, **kwargs):
         if isinstance(data, str):
             doc = parse(data)
+        elif isinstance(data, (dict, list)):
+            doc = object_to_dom("root", data)
         elif not isinstance(data, parsel.Selector):
             raise DocumentTypeNotSupportedForQuerier()
         return doc
@@ -21,8 +52,13 @@ class Extractor:
         if self.version != '1':
             raise VersionNotSupport()
         self.selector = Selector(rule['selector'])
+        self.transformer = Transformer(rule.get('transformer', {}))
 
-    def extract(self, doc, **kwargs):
-        ret = self.selector.select(doc, **kwargs)
+    def extract(self, docs, **kwargs):
+        if not isinstance(docs, list):
+            docs = [docs]
+        ret = self.selector.select(docs, **kwargs)
+        ret = self.transformer.transform(ret, **kwargs)
+
         pp = pprint.PrettyPrinter(indent=2)
         pp.pprint(ret)

@@ -21,6 +21,8 @@ class Selector:
                 for remove in self.remove:
                     rem_ret = remove.query(doc, **kwargs)
                     for query_result in rem_ret:
+                        if not isinstance(query_result, etree._Element):
+                            continue
                         query_result.getparent().remove(query_result)
 
         select_dedup = set()
