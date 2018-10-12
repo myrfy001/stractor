@@ -20,7 +20,6 @@ class XpathQuerier(DomQuerierBase):
         parsel_selector = parsel.Selector(root=doc)
         result = []
         for query in queries:
-            print('===', query)
             rets = parsel_selector.xpath(query)
             for ret in rets:
                 result.append(ret.root)
@@ -33,7 +32,6 @@ class CssQuerier(DomQuerierBase):
         parsel_selector = parsel.Selector(root=doc)
         result = []
         for query in queries:
-            print('===', query)
             rets = parsel_selector.css(query)
             for ret in rets:
                 result.append(ret.root)

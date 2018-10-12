@@ -9,12 +9,13 @@ class Selector:
         self.name = selector['name']
         self.include = [QueryItem(x) for x in selector.get('include', [])]
         self.remove = [QueryItem(x) for x in selector.get('remove', [])]
+        self.value = [QueryItem(x) for x in selector.get('value', [])]
         self.children = selector.get('children')
         if self.children is not None:
             self.children = [Selector(x) for x in self.children]
 
     def select(self, docs, **kwargs):
-        results = []
+        selected = []
 
         if self.remove:
             for doc in docs:
@@ -31,17 +32,27 @@ class Selector:
                 inc_ret = include.query(doc, **kwargs)
                 for query_result in inc_ret:
                     if query_result not in select_dedup:
-                        results.append(query_result)
+                        selected.append(query_result)
                         select_dedup.add(query_result)
-                print(results)
+
+        value = []
+        if self.value:
+            for doc in selected:
+                item_result = {}
+                for value_query in self.value:
+                    val_ret = value_query.query(doc, **kwargs)
+                    item_result[value_query.name] = val_ret
+                if item_result:
+                    value.append(item_result)
 
         children_result = []
         if self.children:
             for child in self.children:
-                children_result.append(child.select(results))
+                children_result.append(child.select(selected))
 
         return {
             "name": self.name,
-            "value": results,
+            "value": value,
+            "selected": selected,
             "children": children_result
         }

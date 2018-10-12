@@ -18,6 +18,8 @@ class QueryItem:
         if not self.queries:
             raise Exception("QueryItem's query can't be empty")
 
+        self.name = query_item.get('name', '')
+
         self.querier_class = self.REGISTERED_QUERIER_CLASSES.get(self.type)
         if self.querier_class is None:
             raise QuerierNotSupported(self.type)

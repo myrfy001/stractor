@@ -34,6 +34,10 @@ def test_html_selector():
                 {
                     "name": "L2_cat2",
                     "include": [{"query": ["./div[@class='cat_2']"]}],
+                    "value":[
+                        {"name": "text", "query": [".//text()"]},
+                        {"name": "link", "query": [".//@href", ".//@href"]}
+                    ],
                     "children": [
                         {
                             "name": "L3",

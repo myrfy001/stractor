@@ -55,10 +55,13 @@ class Extractor:
         self.transformer = Transformer(rule.get('transformer', {}))
 
     def extract(self, docs, **kwargs):
+        # pp = pprint.PrettyPrinter(indent=2)
+
         if not isinstance(docs, list):
             docs = [docs]
         ret = self.selector.select(docs, **kwargs)
+        # pp.pprint(ret)
         ret = self.transformer.transform(ret, **kwargs)
+        # pp.pprint(ret)
 
-        pp = pprint.PrettyPrinter(indent=2)
-        pp.pprint(ret)
+        return ret
