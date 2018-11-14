@@ -49,7 +49,7 @@ def test_html_selector():
         }
     }
 
-    Extractor(rule).extract(Extractor.create_doc(doc))
+    print(Extractor(rule).extract(Extractor.create_doc(doc)))
 
 
 test_html_selector()

@@ -7,7 +7,7 @@ from html5_parser import parse
 import parsel
 import pprint
 from .exceptions import VersionNotSupport, DocumentTypeNotSupportedForQuerier
-from .selector import Selector
+from .selector import SelectorV1, SelectorV1D5
 from .transformer import Transformer
 
 NoneType = type(None)
@@ -49,18 +49,24 @@ class Extractor:
 
     def __init__(self, rule):
         self.version = rule['version']
-        if self.version != '1':
+        if self.version == '1':
+            self.selector = SelectorV1(rule['selector'])
+        elif self.version == '1.5':
+            self.selector = SelectorV1D5(rule['selector'])
+            print('using 1d5')
+        else:
             raise VersionNotSupport()
-        self.selector = Selector(rule['selector'])
+
         self.transformer = Transformer(rule.get('transformer', {}))
 
     def extract(self, docs, **kwargs):
+        import pprint as pp
         # pp = pprint.PrettyPrinter(indent=2)
 
         if not isinstance(docs, list):
             docs = [docs]
         ret = self.selector.select(docs, **kwargs)
-        # pp.pprint(ret)
+        pp.pprint(ret)
         ret = self.transformer.transform(ret, **kwargs)
         # pp.pprint(ret)
 

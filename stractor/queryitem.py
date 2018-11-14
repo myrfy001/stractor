@@ -16,7 +16,7 @@ class QueryItem:
 
         self.queries = query_item.get('query', None)
         if not self.queries:
-            raise Exception("QueryItem's query can't be empty")
+            raise Exception("QueryItem's query can't be empty", query_item)
 
         self.name = query_item.get('name', '')
 
