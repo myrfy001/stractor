@@ -8,7 +8,7 @@ def test_html_selector():
     doc = open('./区块链_钛媒体官方网站.htm').read()
 
     rule = {
-    "version": "1.5",
+    "version": "1",
     "selector": {
         "name": "root",
         "include": [{"type": "xpath", "query": ["/html/body"]}],
