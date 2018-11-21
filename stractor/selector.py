@@ -56,9 +56,13 @@ class SelectorV1:
         if self.value:
             for doc in selected:
                 item_result = {}
-                for value_query in self.value:
-                    val_ret = value_query.query(doc, **kwargs)
-                    item_result[value_query.name] = val_ret
+                if not isinstance(doc, str):
+                    for value_query in self.value:
+                        val_ret = value_query.query(doc, **kwargs)
+                        item_result[value_query.name] = val_ret
+                else:
+                    for value_query in self.value:
+                        item_result[value_query.name] = [doc]
                 if item_result:
                     value.append(item_result)
 
