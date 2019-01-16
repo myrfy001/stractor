@@ -1,18 +1,19 @@
 # coding:utf-8
 from typing import List, Tuple, Dict, Union, Callable
-from . import ComponentBase
+from . import DomAccessComponentBase
 from stractor.utils.dom_modifier import drop_tree, drop_tag
 from stractor.component_registry import component_registry
+from stractor.extract_context import ExtractContext
 
 
-class ComponentDomShaver(ComponentBase):
+class ComponentDomShaver(DomAccessComponentBase):
 
     @classmethod
-    def create_from_config(cls, engine: 'ExtractEngine',
-                           children: List[str], config: Dict):
+    def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
+        children = config.pop('children', [])
+        config.pop('name', None)
         selectors_instances = cls.create_selectors_from_config(
-            component_registry, config.pop('selectors', [])
-        )
+            config.pop('selectors', []))
         component = cls(engine, children,
                         selectors=selectors_instances,
                         **config)
@@ -30,7 +31,7 @@ class ComponentDomShaver(ComponentBase):
     def _process(self,
                  domwrp: 'DomWrapper',
                  call_path: Tuple,
-                 result_context: Union[List, Dict])-> List['DomWrapper']:
+                 extract_context: ExtractContext)-> List['DomWrapper']:
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
 
@@ -50,7 +51,7 @@ class ComponentDomShaver(ComponentBase):
         input_dom = domwrp.dom
         selected = []
         for selector in self.selectors:
-            selected.extend(selector.select(input_dom))
+            selected.extend(selector.process(input_dom))
         for dom in selected:
             action(dom)
 
@@ -58,7 +59,7 @@ class ComponentDomShaver(ComponentBase):
         input_dom = domwrp.dom
         nodes_on_path_to_root = set()
         for selector in self.selectors:
-            sels = selector.select(input_dom)
+            sels = selector.process(input_dom)
             for sel in sels:
                 while sel is not None:
                     nodes_on_path_to_root.add(sel)

@@ -14,5 +14,5 @@ class XpathSelector(SelectorBase):
     def __init__(self, rule: str):
         self.xpath = XPath(rule)
 
-    def select(self, dom: '_Element') -> List:
+    def process(self, dom: '_Element') -> List:
         return self.xpath(dom)

@@ -1,10 +1,13 @@
 # coding:utf-8
 from typing import Dict, Type
+from collections import OrderedDict
 from lxml import etree
 from html5_parser import parse
 
 from stractor.dom_wrapper import DomWrapper
-from stractor.component_registry import component_registry
+from stractor.component_registry import (
+    component_registry, component_from_config)
+from stractor.extract_context import ExtractContext
 
 
 class ExtractEngine:
@@ -20,7 +23,10 @@ class ExtractEngine:
         entry_processor = self.processors[self.entry_point]
         entry_dom_is_shared = len(entry_processor.children) > 1
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
-        entry_processor.process([domwrp], (), {})
+        extract_ctx = ExtractContext()
+        entry_processor.process([domwrp], (), extract_ctx)
+        import pprint
+        pprint.pprint(extract_ctx)
 
 
 class ExtractEngineFactory:
@@ -35,11 +41,7 @@ class ExtractEngineFactory:
         engine = ExtractEngine(entry_point)
         cfg_processors = config['processors']
         for proc_name, proc_cfg in cfg_processors.items():
-            component = proc_cfg['component']
-            children = proc_cfg.get('children', [])
-            params = proc_cfg.get('params', {})
-            proc = component_registry[component].create_from_config(
-                engine=engine, children=children, config=params)
+            proc = component_from_config(proc_cfg, engine=engine)
             engine.add_processor(proc_name, proc)
         return engine
 
@@ -48,14 +50,47 @@ if __name__ == '__main__':
     import json
     from html5_parser import parse
 
-    from stractor.selectors.xpath_selector import XpathSelector
+    from stractor.components.selectors.xpath_selector import XpathSelector
     from stractor.components.dom_selector import ComponentDomSelector
     from stractor.components.dom_shaver import ComponentDomShaver
     from stractor.components.dom_value_extractor import (
-        ComponentDomValueExtractor)
+        ComponentBasicDomValueExtractor)
+
+    {
+        "article": "this is article",
+        "comment_group": [
+            {
+                "comment_text": "t1",
+                "children": [
+                    {
+                        "comment_text": "t1-1",
+                        "children": [
+                            {"comment_text": "t1-1-1"}
+                        ]
+                    },
+                    {"comment_text": "t1-2"}
+                ]
+            },
+            {
+                "comment_text": "t2",
+                "children": [
+                    {
+                        "comment_text": "t2-1",
+                        "children": [
+                            {"comment_text": "t2-1-1"},
+                            {"comment_text": "t2-1-2"}
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
 
     html = '''
     <o>
+        <article>
+            this is article
+        </article>
         <c id="1">
             <t>t1</t>
             <c id="1-1">
@@ -89,44 +124,78 @@ if __name__ == '__main__':
         "processors":{
             "p0":{
                 "name": "选中Body",
-                "component":"ComponentDomSelector",
+                "!component":"ComponentDomSelector",
                 "params":{
                     "selectors":[
                         {
-                            "component": "XpathSelector",
+                            "!component": "XpathSelector",
                             "params":{
                                 "rule":"//body/o"
                             }
                         }
-                    ]
-                },
-                "children":["p1"]
+                    ],
+                    "children":["p1", "p3"]
+                }
             },
             "p1":{
                 "name":"递归抽取C标签",
-                "component": "ComponentDomSelector",
+                "!component": "ComponentDomSelector",
                 "params":{
                     "selectors":[
                         {
-                            "component": "XpathSelector",
+                            "!component": "XpathSelector",
                             "params":{
                                 "rule":"./c"
                             }
                         }
-                    ]
-                },
-                "children":["p2", "p1"]
+                    ],
+                    "children":["p2", "p1"]
+                }
             },
             "p2":{
-                "name":"值抽取器",
-                "component": "ComponentDomValueExtractor",
+                "name":"评论抽取器",
+                "!component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "selectors":[
+                    "group_name":"comment_group",
+                    "fields":[
                         {
-                            "component": "XpathSelector",
-                            "params":{
-                                "rule":"./t/text()"
-                            }
+                            "name": "comment_text",
+                            "value_type": "text",
+                            "is_array": false,
+                            "default_value": null,
+                            "allow_missing": true,
+                            "selectors":[
+                                {
+                                    "!component": "XpathSelector",
+                                    "params":{
+                                        "rule":"./t/text()"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "p3":{
+                "name":"文章抽取器",
+                "!component": "ComponentBasicDomValueExtractor",
+                "params":{
+                    "group_name":"article_group",
+                    "fields":[
+                        {
+                            "name": "article_text",
+                            "value_type": "text",
+                            "is_array": false,
+                            "default_value": null,
+                            "allow_missing": true,
+                            "selectors":[
+                                {
+                                    "!component": "XpathSelector",
+                                    "params":{
+                                        "rule":"./article/text()"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 }
@@ -141,7 +210,7 @@ if __name__ == '__main__':
         'XpathSelector': XpathSelector,
         'ComponentDomSelector': ComponentDomSelector,
         'ComponentDomShaver': ComponentDomShaver,
-        'ComponentDomValueExtractor': ComponentDomValueExtractor
+        'ComponentBasicDomValueExtractor': ComponentBasicDomValueExtractor
     })
     extract_engine_factory = ExtractEngineFactory()
     engine = extract_engine_factory.create_engine_from_config(config)
