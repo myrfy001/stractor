@@ -24,7 +24,7 @@ class ExtractEngine:
         entry_dom_is_shared = len(entry_processor.children) > 1
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
         extract_ctx = ExtractContext()
-        entry_processor.process([domwrp], (), extract_ctx)
+        entry_processor.process(domwrp, (), extract_ctx)
         import pprint
         pprint.pprint(extract_ctx)
 
@@ -93,25 +93,33 @@ if __name__ == '__main__':
         </article>
         <c id="1">
             <t>t1</t>
+            <div><like>l1</like></div>
             <c id="1-1">
                 <t>t1-1</t>
+                <div><like>l1-1</like></div>
                 <c id="1-1-1">
                     <t>t1-1-1</t>
+                    <div><like>l1-1-1</like></div>
                 </c>
             </c>
             <c id="1-2">
                 <t>t1-2</t>
+                <div><like>l1-2</like></div>
             </c>
         </c>
         <c id="2">
             <t>t2</t>
+            <div><like>l2</like></div>
             <c id="2-1">
                 <t>t2-1</t>
+                <div><like>l2-1</like></div>
                 <c id="2-1-1">
                     <t>t2-1-1</t>
+                    <div><like>l2-1-1</like></div>
                 </c>
                 <c id="2-1-2">
                     <t>t2-1-2</t>
+                    <div><like>l2-1-2</like></div>
                 </c>
             </c>
         </c>
@@ -149,10 +157,10 @@ if __name__ == '__main__':
                             }
                         }
                     ],
-                    "children":["p2", "p1"]
+                    "children":["p2-0", "p2-1", "p1"]
                 }
             },
-            "p2":{
+            "p2-0":{
                 "name":"评论抽取器",
                 "!component": "ComponentBasicDomValueExtractor",
                 "params":{
@@ -169,6 +177,45 @@ if __name__ == '__main__':
                                     "!component": "XpathSelector",
                                     "params":{
                                         "rule":"./t/text()"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "p2-1":{
+                "name": "评论点赞div标签删除器",
+                "!component":"ComponentDomSelector",
+                "params":{
+                    "selectors":[
+                        {
+                            "!component": "XpathSelector",
+                            "params":{
+                                "rule":"./div/like"
+                            }
+                        }
+                    ],
+                    "children":["p2-1-0"]
+                }
+            },
+            "p2-1-0":{
+                "name":"点赞数抽取器",
+                "!component": "ComponentBasicDomValueExtractor",
+                "params":{
+                    "group_name":"comment_group",
+                    "fields":[
+                        {
+                            "name": "comment_like",
+                            "value_type": "text",
+                            "is_array": false,
+                            "default_value": null,
+                            "allow_missing": true,
+                            "selectors":[
+                                {
+                                    "!component": "XpathSelector",
+                                    "params":{
+                                        "rule":"./text()"
                                     }
                                 }
                             ]

@@ -39,14 +39,12 @@ class DomAccessComponentBase(ComponentBase):
         self.children = children
         self.output_is_shared = len(self.children) > 1
 
-    def process(self, domwrps: List['DomWrapper'],
+    def process(self, domwrps: 'DomWrapper',
                 call_path: Tuple,
                 result_context: TrieTreeWithListData):
-        processed_results = [
-            self._process(x, call_path, result_context) for x in domwrps]
-
+        processed_results = self._process(domwrps, call_path, result_context)
+        new_path_level = str(uuid.uuid4())[:5]
         for child in self.children:
-            new_path_level = str(uuid.uuid4())[:5]
             for idx, processed_result in enumerate(processed_results):
                 self.engine.processors[child].process(
                     processed_result,
