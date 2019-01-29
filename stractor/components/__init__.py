@@ -48,11 +48,11 @@ class DomAccessComponentBase(ComponentBase):
         for child in self.children:
             # new_path_level = str(uuid.uuid4())[:5]
             child_proc = self.engine.processors[child]
-            new_path_level = child_proc.name
+            new_path_level = str(uuid.uuid4())[:5] + ':' + child_proc.name
             for idx, processed_result in enumerate(processed_results):
                 child_proc.process(
                     processed_result,
-                    call_path + (f'{new_path_level}_{idx}',),
+                    call_path + ((new_path_level, idx),),
                     result_context)
 
     def _process(self,

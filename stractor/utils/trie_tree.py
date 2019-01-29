@@ -60,10 +60,8 @@ class TrieTreeNode(defaultdict):
         while 1:
             if len(child_node) != 1:
                 break
-
-            shortcut_stop_name, child_node = next(
-                iter(child_node.items()))
-            if ((not child_node.has_data) and len(child_node) == 1):
+            child_node = next(iter(child_node.values()))
+            if child_node.is_passthrough_node:
                 last_node = child_node
             else:
                 break
@@ -104,6 +102,10 @@ class TrieTreeNode(defaultdict):
     def has_data(self):
         return (self.data is not TireNodeNoData)
 
+    @property
+    def is_passthrough_node(self):
+        return (not self.has_data and len(self) == 1)
+
 
 class TrieTreeWithMetaData:
 
@@ -118,6 +120,5 @@ class TrieTreeWithMetaData:
         current_node = self.root
         for prefix in prefixs:
             current_node = current_node[prefix]
-            print('prefix', prefix)
         current_node.data = value
         current_node.set_node_meta(node_meta)

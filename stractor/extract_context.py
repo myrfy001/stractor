@@ -1,11 +1,28 @@
 # coding:utf-8
+import json
 from collections import OrderedDict
 from collections.abc import Mapping
 from copy import copy
+from itertools import groupby
 
 from typing import Optional
 
 from stractor.utils.trie_tree import TrieTreeWithMetaData, TrieTreeNode
+
+
+class TupleKeyToStrings(json.JSONEncoder):
+    def _encode(self, obj):
+        if isinstance(obj, Mapping):
+            t = {}
+            for k, v in obj.items():
+                v = self._encode(v)
+                t[str(k)] = v
+            return t
+        else:
+            return obj
+
+    def encode(self, obj):
+        return super(TupleKeyToStrings, self).encode(self._encode(obj))
 
 
 class ExtractContext:
@@ -17,61 +34,80 @@ class ExtractContext:
 
     def export_result(self):
         import json
-        print(json.dumps(self.trie_tree.root))
-        dummy_node = TrieTreeNode()
-        dummy_node['dummy_head'] = self.trie_tree.root
-        self._remove_trie_tree_pass_through_node(dummy_node)
-        self.trie_tree.root
-        return self.trie_tree.root
-        # return self._export_result(self.trie_tree.root)
+        print(json.dumps(self.trie_tree.root, cls=TupleKeyToStrings))
+        new_tree = self.create_shortcut_tree(self.trie_tree.root)
+        print('===========')
+        print(json.dumps(new_tree.root, cls=TupleKeyToStrings))
+        print('>>>>>>>>>>>>>>')
+        # return self.trie_tree.root
+        return self._export_result(new_tree.root).data
 
-    def _remove_trie_tree_pass_through_node(self, node: TrieTreeNode):
+    def _create_shortcut_tree(self, root: TrieTreeNode):
+        new_node = TrieTreeNode()
+        new_node.data = root.data
+        new_node.node_meta = root.node_meta
 
-        if node.has_data:
-            return
+        for child_name, child in root.items():
+            if child.is_passthrough_node:
+                last_node = TrieTreeNode._get_shortcut_last_node(child)
+                name, value = next(iter(last_node.items()))
+            else:
+                name, value = child_name, child
 
-        node.shortcut_children()
+            # Make sure that the order is kept
+            name = (name[0], child_name[1])
 
-        for child in node.values():
-            self._remove_trie_tree_pass_through_node(child)
+            value = self._create_shortcut_tree(value)
+            new_node[name] = value
+
+        return new_node
+
+    def create_shortcut_tree(self, root: TrieTreeNode):
+
+        # first step, get the first 'non-pass-through' node as the new root
+        while 1:
+            if root.is_passthrough_node:
+                root = next(iter(root.values()))
+            else:
+                break
+        # second step, process other parts of the tree
+        new_tree = TrieTreeWithMetaData()
+        new_tree.root = self._create_shortcut_tree(root)
+        return new_tree
 
     def _export_result(self, root: TrieTreeNode):
 
-        children_results = []
-        for child in root.values():
-            child_ret = self._export_result(child)
-            children_results.append(child_ret)
+        # used for group data at the same level
+        def get_idx_from_key(x): return x[0][1]
 
-        # if this level has no data, then pass through
-        if not root.has_data:
-            if len(children_results) == 1:
-                return children_results[0]
+        data_children = []
+        for child_name, child in root.items():
+            if child.has_data:
+                data_children.append((child_name, child))
             else:
-                return children_results
+                child_ret = self._export_result(child)
+                data_children.append((child_name, child_ret))
 
-        value, node_meta = root.data, root.node_meta
-        fields_group_name = node_meta['fields_group_name']
+        data_children.sort(key=get_idx_from_key)
 
-        if len(value) == 1:
-            if not node_meta['force_list']:
-                value = value[0]
+        merged_items = []
+        for k, g in groupby(data_children, key=get_idx_from_key):
+            buf = {}
+            for group_member in g:
+                buf.update(group_member[1].data)
+            # print('///////////////')
+            # print(buf)
+            merged_items.append(buf)
 
-        if fields_group_name is not None:
-            result = {fields_group_name: value}
-        else:
-            if isinstance(value, Mapping):
-                # We don't know the class of the mapping,
-                # maybe it's a dict, or ordered dict, so we copy it
-                result = value.copy()
-            elif isinstance(value, list):
-                print('--------------------------')
-                print(value)
-                result = copy(value[0])
-                if not isinstance(result, Mapping):
-                    raise Exception('Should Be Mapping')
-            else:
-                raise Exception('Unknown Data Format')
-        print('====', result)
-        if children_results:
-            result[node_meta['children_field_name']] = children_results
-        return result
+        # node_meta = root.node_meta
+        # if len(merged_items) == 1:
+        #     if not node_meta['force_list']:
+        #         merged_items = merged_items[0]
+
+        result = {
+            'children': merged_items
+        }
+
+        tmp = TrieTreeNode()
+        tmp.data = result
+        return tmp
