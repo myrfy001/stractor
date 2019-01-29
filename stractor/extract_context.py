@@ -3,18 +3,37 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from copy import copy
 
-from stractor.utils.trie_tree import TrieTreeWithListData, TrieTreeNode
+from typing import Optional
+
+from stractor.utils.trie_tree import TrieTreeWithMetaData, TrieTreeNode
 
 
 class ExtractContext:
     def __init__(self):
-        self.trie_tree = TrieTreeWithListData()
+        self.trie_tree = TrieTreeWithMetaData()
 
     def add_item(self, path, value, value_meta):
         self.trie_tree.add_item(path, value, value_meta)
 
     def export_result(self):
-        return self._export_result(self.trie_tree.root)
+        import json
+        print(json.dumps(self.trie_tree.root))
+        dummy_node = TrieTreeNode()
+        dummy_node['dummy_head'] = self.trie_tree.root
+        self._remove_trie_tree_pass_through_node(dummy_node)
+        self.trie_tree.root
+        return self.trie_tree.root
+        # return self._export_result(self.trie_tree.root)
+
+    def _remove_trie_tree_pass_through_node(self, node: TrieTreeNode):
+
+        if node.has_data:
+            return
+
+        node.shortcut_children()
+
+        for child in node.values():
+            self._remove_trie_tree_pass_through_node(child)
 
     def _export_result(self, root: TrieTreeNode):
 

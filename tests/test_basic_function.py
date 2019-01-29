@@ -59,8 +59,23 @@ def test_basic_flow():
 
     config = """
     {
-        "entry": "p0",
+        "entry": "pn1",
         "processors":{
+            "pn1":{
+                "name": "选中Html",
+                "!component":"ComponentDomSelector",
+                "params":{
+                    "selectors":[
+                        {
+                            "!component": "XpathSelector",
+                            "params":{
+                                "rule":"/html"
+                            }
+                        }
+                    ],
+                    "children":["p0"]
+                }
+            },
             "p0":{
                 "name": "选中Body",
                 "!component":"ComponentDomSelector",
@@ -95,7 +110,8 @@ def test_basic_flow():
                 "name":"评论抽取器",
                 "!component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "fields_group_name":"comment_group",
+                    "fields_group_name":"comments",
+                    "level_lift":1,
                     "fields":[
                         {
                             "name": "comment_text",
@@ -159,7 +175,6 @@ def test_basic_flow():
                 "name":"文章抽取器",
                 "!component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "fields_group_name":"article_group",
                     "level_lift": 0,
                     "children_field_name":"children",
                     "force_list": false,

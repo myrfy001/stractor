@@ -24,7 +24,8 @@ class ExtractEngine:
         entry_dom_is_shared = len(entry_processor.children) > 1
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
         extract_ctx = ExtractContext()
-        entry_processor.process(domwrp, (), extract_ctx)
+        entry_processor.process(
+            domwrp, (f'{entry_processor.name}_0',), extract_ctx)
         import pprint
         pprint.pprint(extract_ctx)
         return extract_ctx.export_result()
@@ -43,5 +44,6 @@ class ExtractEngineFactory:
         cfg_processors = config['processors']
         for proc_name, proc_cfg in cfg_processors.items():
             proc = component_from_config(proc_cfg, engine=engine)
+            proc.name = proc_name
             engine.add_processor(proc_name, proc)
         return engine

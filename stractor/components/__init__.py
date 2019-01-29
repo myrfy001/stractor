@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 from stractor.component_registry import component_from_config
 
-from stractor.utils.trie_tree import TrieTreeWithListData
+from stractor.utils.trie_tree import TrieTreeWithMetaData
 
 
 class ComponentABC(metaclass=ABCMeta):
@@ -38,15 +38,19 @@ class DomAccessComponentBase(ComponentBase):
         self.engine = engine
         self.children = children
         self.output_is_shared = len(self.children) > 1
+        self.name = None
 
     def process(self, domwrps: 'DomWrapper',
                 call_path: Tuple,
-                result_context: TrieTreeWithListData):
+                result_context: TrieTreeWithMetaData):
         processed_results = self._process(domwrps, call_path, result_context)
-        new_path_level = str(uuid.uuid4())[:5]
+
         for child in self.children:
+            # new_path_level = str(uuid.uuid4())[:5]
+            child_proc = self.engine.processors[child]
+            new_path_level = child_proc.name
             for idx, processed_result in enumerate(processed_results):
-                self.engine.processors[child].process(
+                child_proc.process(
                     processed_result,
                     call_path + (f'{new_path_level}_{idx}',),
                     result_context)

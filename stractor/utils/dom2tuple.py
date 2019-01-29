@@ -3,7 +3,7 @@
 from lxml import etree
 
 from html5_parser import parse
-from dom_modifier import add_id_to_all_node
+# from dom_modifier import add_id_to_all_node
 
 
 def dom_to_tuple(dom):
@@ -717,6 +717,5 @@ if __name__ == '__main__':
 </script>
 
 </body>
-</html>
-    '''
+</html>'''
     dom_to_tuple(parse(html))

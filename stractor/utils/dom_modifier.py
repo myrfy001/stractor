@@ -24,6 +24,7 @@ def drop_tag(node: '_Element'):
     Remove the tag, but not its children or text.  The children and text
     are merged into the parent.
     Example::
+        >>> from lxml.html import fragment_fromstring, tostring
         >>> h = fragment_fromstring('<div>Hello <b>World!</b></div>')
         >>> h.find('.//b').drop_tag()
         >>> print(tostring(h, encoding='unicode'))

@@ -13,8 +13,6 @@ class ComponentDomSelector(DomAccessComponentBase):
     def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
 
         children = config.pop('children', [])
-        config.pop('name', None)
-
         selectors_instances = cls.create_selectors_from_config(
             config.pop('selectors', []))
         component = cls(engine, children,

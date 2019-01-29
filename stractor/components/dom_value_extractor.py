@@ -15,7 +15,6 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     @classmethod
     def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
         children = config.pop('children', [])
-        config.pop('name', None)
         fields_group_name = config.pop('fields_group_name', None)
         level_lift = config.pop('level_lift', 0)
         children_field_name = config.pop('children_field_name', 'children')
@@ -56,40 +55,35 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
                  extract_context: ExtractContext)-> 'DomWrapper':
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
+        try:
+            result = OrderedDict()
+            input_dom = domwrp.dom
 
-        result = OrderedDict()
-        input_dom = domwrp.dom
+            for field_info in self.field_infos:
+                field_name = field_info['name']
+                value_type = field_info['value_type']
+                selectors = field_info['selectors']
+                is_array = field_info['is_array']
+                result_buf = []
+                for selector in selectors:
+                    sels = selector.process(input_dom)
+                    result_buf.extend(sels)
+                if not result_buf:
+                    if field_info.get('allow_missing', True):
+                        result_buf.append(
+                            field_info.get('default_value', None))
+                    else:
+                        raise MissingFieldError()
+                result_buf = [convert_to_type(x, value_type)
+                              for x in result_buf]
 
-        for field_info in self.field_infos:
-            field_name = field_info['name']
-            value_type = field_info['value_type']
-            selectors = field_info['selectors']
-            is_array = field_info['is_array']
-            result_buf = []
-            for selector in selectors:
-                sels = selector.process(input_dom)
-                result_buf.extend(sels)
-            if not result_buf:
-                if field_info.get('allow_missing', True):
-                    result_buf.append(field_info.get('default_value', None))
-                else:
-                    raise MissingFieldError()
-            result_buf = [convert_to_type(x, value_type) for x in result_buf]
+                # missing value is handled above
+                if not is_array:
+                    result_buf = result_buf[0]
+                result[field_name] = result_buf
 
-            # missing value is handled above
-            if not is_array:
-                result_buf = result_buf[0]
-            result[field_name] = result_buf
-
-        # print(call_path)
-        if self.level_lift > 0:
-            _call_path = call_path[:-self.level_lift]
-            # for lifted field, should not affect other's meta
-            result_meta = None
-        else:
-            _call_path = call_path
-            result_meta = self.result_meta
-
-        print(call_path, result)
-        extract_context.add_item(_call_path, result, result_meta)
-        return result
+        finally:
+            # Because at trie tree processing stage, the order and count of the results is very important for merging fields, we must make sure that no matter
+            print(call_path, result)
+            extract_context.add_item(call_path, result, self.result_meta)
+            return result
