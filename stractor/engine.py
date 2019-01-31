@@ -1,6 +1,5 @@
 # coding:utf-8
 from typing import Dict, Type
-from collections import OrderedDict
 from lxml import etree
 from html5_parser import parse
 
@@ -25,9 +24,7 @@ class ExtractEngine:
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
         extract_ctx = ExtractContext()
         entry_processor.process(
-            domwrp, (f'{entry_processor.name}_0',), extract_ctx)
-        import pprint
-        pprint.pprint(extract_ctx)
+            domwrp, ((0, f'{entry_processor.name}'),), extract_ctx)
         return extract_ctx.export_result()
 
 

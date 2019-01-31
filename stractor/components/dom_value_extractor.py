@@ -8,6 +8,7 @@ from stractor.extract_context import ExtractContext
 from stractor.dom_wrapper import DomWrapper
 from stractor.component_registry import component_registry
 from stractor.exceptions import MissingFieldError
+from stractor.result_meta import ResultMeta
 
 
 class ComponentBasicDomValueExtractor(DomAccessComponentBase):
@@ -16,38 +17,40 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
         children = config.pop('children', [])
         fields_group_name = config.pop('fields_group_name', None)
-        level_lift = config.pop('level_lift', 0)
-        children_field_name = config.pop('children_field_name', 'children')
-        force_list = config.pop('force_list', False)
+        parent_fields_group_name = config.pop(
+            'parent_fields_group_name', fields_group_name)
+        print('parent_fields_group_name', parent_fields_group_name)
+        force_list = config.pop('force_list', True)
         field_cfgs = config['fields']
         for field_cfg in field_cfgs:
             selectors_instances = cls.create_selectors_from_config(
                 field_cfg.pop('selectors', []))
             field_cfg['selectors'] = selectors_instances
         component = cls(engine, children,
-                        fields_group_name, level_lift,
-                        children_field_name, force_list, field_cfgs)
+                        fields_group_name,
+                        parent_fields_group_name,
+                        force_list, field_cfgs)
         return component
 
     def __init__(self,
                  engine: 'ExtractEngine',
                  children: List[str],
                  fields_group_name: Optional[str],
-                 level_lift: int,
-                 children_field_name: str,
+                 parent_fields_group_name: Optional[str],
                  force_list: bool,
                  fields: Dict[str, Dict]):
         super().__init__(engine, children)
         self.field_infos = fields
         self.fields_group_name = fields_group_name
-        self.level_lift = level_lift
-        self.children_field_name = children_field_name
+        self.parent_fields_group_name = parent_fields_group_name
         self.force_list = force_list
-        self.result_meta = {
-            'fields_group_name': fields_group_name,
-            'children_field_name': children_field_name,
-            'force_list': force_list
-        }
+
+        result_meta = ResultMeta()
+        result_meta.fields_group_name = fields_group_name
+        result_meta.group_to_parent_group_name_map = {
+            fields_group_name: parent_fields_group_name}
+        result_meta.force_list = force_list
+        self.result_meta = result_meta
 
     def _process(self,
                  domwrp: 'DomWrapper',

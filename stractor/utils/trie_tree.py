@@ -115,7 +115,7 @@ class TrieTreeWithMetaData:
     def add_item(self,
                  prefixs: Iterable[Hashable],
                  value: Any,
-                 node_meta: Optional[Dict]):
+                 node_meta: Optional[Any]):
 
         current_node = self.root
         for prefix in prefixs:

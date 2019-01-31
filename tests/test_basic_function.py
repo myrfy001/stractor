@@ -111,7 +111,6 @@ def test_basic_flow():
                 "!component": "ComponentBasicDomValueExtractor",
                 "params":{
                     "fields_group_name":"comments",
-                    "level_lift":1,
                     "fields":[
                         {
                             "name": "comment_text",
@@ -150,8 +149,7 @@ def test_basic_flow():
                 "name":"点赞数抽取器",
                 "!component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "fields_group_name":"like_group",
-                    "level_lift": 1,
+                    "fields_group_name":"comments",
                     "fields":[
                         {
                             "name": "comment_like",
@@ -175,8 +173,6 @@ def test_basic_flow():
                 "name":"文章抽取器",
                 "!component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "level_lift": 0,
-                    "children_field_name":"children",
                     "force_list": false,
                     "fields":[
                         {

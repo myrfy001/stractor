@@ -6,8 +6,11 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
 from stractor.component_registry import component_from_config
-
 from stractor.utils.trie_tree import TrieTreeWithMetaData
+from stractor.utils.inc_counter import IncCounter
+
+
+uid_counter = IncCounter()
 
 
 class ComponentABC(metaclass=ABCMeta):
@@ -46,13 +49,18 @@ class DomAccessComponentBase(ComponentBase):
         processed_results = self._process(domwrps, call_path, result_context)
 
         for child in self.children:
-            # new_path_level = str(uuid.uuid4())[:5]
             child_proc = self.engine.processors[child]
-            new_path_level = str(uuid.uuid4())[:5] + ':' + child_proc.name
+            new_path_level = uid_counter.get_next_str() + ':' + child_proc.name
             for idx, processed_result in enumerate(processed_results):
                 child_proc.process(
                     processed_result,
-                    call_path + ((new_path_level, idx),),
+                    # the format of call_path is designed for sorting in
+                    # merging step, idx is used for grouping items, each idx
+                    # will be an item in the resulting list. Items with the
+                    # same idx will be berged into a dict, because
+                    # new_path_level is monotonic and is the secondary sorting
+                    # key, the merging order is same with the extraction order
+                    call_path + ((idx, new_path_level),),
                     result_context)
 
     def _process(self,
