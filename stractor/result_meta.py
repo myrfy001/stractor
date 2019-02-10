@@ -3,21 +3,21 @@
 
 class ResultMeta:
 
-    __slots__ = ('_fields_to_parent_fields_name_map',
+    __slots__ = ('_fields_group_name',
                  '_force_list', '_has_merged_data')
 
     def __init__(self):
-        self._fields_to_parent_fields_name_map = {}
+        self._fields_group_name = {}
         self._force_list = True
         self._has_merged_data = False
 
     @property
-    def fields_to_parent_fields_name_map(self):
-        return self._fields_to_parent_fields_name_map
+    def fields_group_name(self):
+        return self._fields_group_name
 
-    @fields_to_parent_fields_name_map.setter
-    def fields_to_parent_fields_name_map(self, v):
-        self._fields_to_parent_fields_name_map = v
+    @fields_group_name.setter
+    def fields_group_name(self, v):
+        self._fields_group_name = v
 
     @property
     def force_list(self):

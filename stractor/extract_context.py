@@ -108,14 +108,20 @@ class ExtractContext:
                 else:
                     unmerged_members.append(group_member)
 
+                # force_list defaults to True, if any one set it to Flase, then
+                # the value should be False
+                meta_opt_force_list = (
+                    meta_opt_force_list and group_member.node_meta.force_list)
+
             for group_member in unmerged_members:
                 # unmerged members should be processed first because merged
                 # members may be child of them
-                c2p_name_map = (
-                    group_member.node_meta.fields_to_parent_fields_name_map)
-                for child_name, child_value in group_member.data.items():
-                    buf[c2p_name_map[child_name]
-                        ][child_name] = child_value
+                fields_group_name = group_member.node_meta.fields_group_name
+                if fields_group_name:
+                    buf[group_member.node_meta.fields_group_name
+                        ].update(group_member.data)
+                else:
+                    buf.update(group_member.data)
 
             for group_member in merged_members:
                 for child_grp_name, child_grp in group_member.data.items():
@@ -127,10 +133,10 @@ class ExtractContext:
             for k, v in buf.items():
                 final_result[k].append(v)
 
-        # if not meta_opt_force_list:
-        #     for group_name, group in grouped_results.items():
-        #         if len(grouped_results) == 1:
-        #             grouped_results[group_name] = group[0]
+        if not meta_opt_force_list:
+            for group_name, group in final_result.items():
+                if len(group) == 1:
+                    final_result[group_name] = group[0]
 
         result = TrieTreeNode()
         result.data = final_result

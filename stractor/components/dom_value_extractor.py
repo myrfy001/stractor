@@ -16,7 +16,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     @classmethod
     def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
         children = config.pop('children', [])
-        default_parent_name = config.pop('default_parent_name', None)
+        fields_group_name = config.pop('fields_group_name', None)
         force_list = config.pop('force_list', True)
         field_cfgs = config['fields']
         for field_cfg in field_cfgs:
@@ -24,31 +24,23 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
                 field_cfg.pop('selectors', []))
             field_cfg['selectors'] = selectors_instances
         component = cls(engine, children,
-                        default_parent_name,
+                        fields_group_name,
                         force_list, field_cfgs)
         return component
 
     def __init__(self,
                  engine: 'ExtractEngine',
                  children: List[str],
-                 default_parent_name: Optional[str],
+                 fields_group_name: Optional[str],
                  force_list: bool,
                  fields: List[Dict[str, Dict]]):
         super().__init__(engine, children)
         self.field_infos = fields
-        self.default_parent_name = default_parent_name
+        self.fields_group_name = fields_group_name
         self.force_list = force_list
 
         result_meta = ResultMeta()
-
-        fields_to_parent_fields_name_map = {}
-        for field in fields:
-            fields_to_parent_fields_name_map[field['name']] = field.get(
-                'parent_name', default_parent_name)
-
-        result_meta.fields_to_parent_fields_name_map = (
-            fields_to_parent_fields_name_map)
-
+        result_meta.fields_group_name = fields_group_name
         result_meta.force_list = force_list
         self.result_meta = result_meta
 
