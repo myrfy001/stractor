@@ -84,23 +84,13 @@ class ExtractContext:
         new_group_to_parent_group_name_map = {}
         data_children = []
         for child_name, child in root.items():
-            if child.has_data:
-                data_children.append((child_name, child))
-                node_meta = child.node_meta
-                for child_name, parent_name in (
-                        node_meta.group_to_parent_group_name_map.items()):
-                    t = new_group_to_parent_group_name_map.setdefault(
-                        child_name, parent_name)
-                    if t != parent_name:
-                        raise Exception(
-                            f"The fields_group_name '{child_name}' has "
-                            f"different parent_fields_group_name '{t}' and "
-                            f"'{parent_name}'")
-            else:
-                child_ret = cls._export_result(child)
-                print('---[Node Meta]---',
-                      child_ret.node_meta.group_to_parent_group_name_map)
-                data_children.append((child_name, child_ret))
+            child_ret = cls._export_result(child)
+            data_children.append((child_name, child_ret))
+            node_meta = child_ret.node_meta
+
+        if not data_children:
+            # Don't have any child, reached leaf, return
+            return root
 
         data_children.sort()
 
@@ -109,41 +99,30 @@ class ExtractContext:
         for idx_grp_key, idx_grp in groupby(data_children, key=get_idx_key):
             buf = defaultdict(OrderedDict)
             print('new buf', idx_grp_key)
+            merged_members = []
+            unmerged_members = []
             for idx_group_member_tuple in idx_grp:
                 member_trie_key, group_member = idx_group_member_tuple
-                node_meta = group_member.node_meta
-                if group_member.has_data:
-                    # this is a leaf data node
-                    group_name = node_meta.fields_group_name
-                    print('Merging Data Node-------------------------')
-                    print('into:', group_name, id(buf[group_name]))
-                    print('new data:',  json.dumps(group_member.data))
-                    print('before merge',  json.dumps(buf[group_name]))
-                    buf[group_name].update(group_member.data)
-                    print('after merge',  json.dumps(buf[group_name]))
-                    # if anyone unset force_list, it will take effect
-                    meta_opt_force_list = (
-                        meta_opt_force_list and node_meta.force_list)
-
+                if group_member.node_meta.has_merged_data:
+                    merged_members.append(group_member)
                 else:
-                    # this is a merged child node
+                    unmerged_members.append(group_member)
 
-                    print('Merging Child Node-------------------------')
-                    print('into:', id(buf))
-                    print('new data:',  json.dumps(group_member.data))
+            for group_member in unmerged_members:
+                # unmerged members should be processed first because merged
+                # members may be child of them
+                c2p_name_map = (
+                    group_member.node_meta.fields_to_parent_fields_name_map)
+                for child_name, child_value in group_member.data.items():
+                    buf[c2p_name_map[child_name]
+                        ][child_name] = child_value
 
-                    print('before merge',  json.dumps(buf))
-                    c2p_name_map = node_meta.group_to_parent_group_name_map
-                    print('c2p_name_map',  json.dumps(c2p_name_map))
-                    print('child_grp_name',  json.dumps(child_grp_name))
-                    print('child_grp',  json.dumps(child_grp))
-                    for child_grp_name, child_grp in group_member.data:
-                        buf[c2p_name_map[child_grp_name]].update(child_grp)
-                    print('after merge', json.dumps(buf))
-                    # for group_name, group_data in group_member.data.items():
-                    #     print('EEEEEEEEEE')
-                    #     print(group_name, group_data)
-                    #     buf[group_name].updaÈe(group_data)
+            for group_member in merged_members:
+                for child_grp_name, child_grp in group_member.data.items():
+                    if child_grp_name in buf:
+                        buf[child_grp_name][child_grp_name] = child_grp
+                    else:
+                        buf[child_grp_name] = child_grp
 
             for k, v in buf.items():
                 final_result[k].append(v)
@@ -156,8 +135,7 @@ class ExtractContext:
         result = TrieTreeNode()
         result.data = final_result
         result_meta = ResultMeta()
-        result_meta.group_to_parent_group_name_map = (
-            new_group_to_parent_group_name_map)
+        result_meta.has_merged_data = True
         result.set_node_meta(result_meta)
         print('This Level Result >>>>>>>>>>>>>>>>>>>>>>')
         print(json.dumps(final_result))

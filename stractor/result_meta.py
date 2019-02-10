@@ -3,36 +3,34 @@
 
 class ResultMeta:
 
-    __slots__ = ('_data',)
+    __slots__ = ('_fields_to_parent_fields_name_map',
+                 '_force_list', '_has_merged_data')
 
     def __init__(self):
-        self._data = {}
+        self._fields_to_parent_fields_name_map = {}
+        self._force_list = True
+        self._has_merged_data = False
 
     @property
-    def fields_group_name(self):
-        return self._data.get('fields_group_name')
+    def fields_to_parent_fields_name_map(self):
+        return self._fields_to_parent_fields_name_map
 
-    @fields_group_name.setter
-    def fields_group_name(self, v):
-        self._data['fields_group_name'] = v
-
-    # ========================================================================
-    # 'group_to_parent_group_name_map' property is a map because children from
-    # different node may have different group names and each group name may be
-    # corresponding to a different parent group name
-
-    @property
-    def group_to_parent_group_name_map(self):
-        return self._data.get('group_to_parent_group_name_map', {})
-
-    @group_to_parent_group_name_map.setter
-    def group_to_parent_group_name_map(self, v):
-        self._data['group_to_parent_group_name_map'] = v
+    @fields_to_parent_fields_name_map.setter
+    def fields_to_parent_fields_name_map(self, v):
+        self._fields_to_parent_fields_name_map = v
 
     @property
     def force_list(self):
-        return self._data.get('force_list')
+        return self._force_list
 
     @force_list.setter
     def force_list(self, v):
-        self._data['force_list'] = v
+        self._force_list = v
+
+    @property
+    def has_merged_data(self):
+        return self._has_merged_data
+
+    @has_merged_data.setter
+    def has_merged_data(self, v):
+        self._has_merged_data = v

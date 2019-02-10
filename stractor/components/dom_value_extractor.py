@@ -16,10 +16,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     @classmethod
     def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
         children = config.pop('children', [])
-        fields_group_name = config.pop('fields_group_name', None)
-        parent_fields_group_name = config.pop(
-            'parent_fields_group_name', fields_group_name)
-        print('parent_fields_group_name', parent_fields_group_name)
+        default_parent_name = config.pop('default_parent_name', None)
         force_list = config.pop('force_list', True)
         field_cfgs = config['fields']
         for field_cfg in field_cfgs:
@@ -27,28 +24,31 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
                 field_cfg.pop('selectors', []))
             field_cfg['selectors'] = selectors_instances
         component = cls(engine, children,
-                        fields_group_name,
-                        parent_fields_group_name,
+                        default_parent_name,
                         force_list, field_cfgs)
         return component
 
     def __init__(self,
                  engine: 'ExtractEngine',
                  children: List[str],
-                 fields_group_name: Optional[str],
-                 parent_fields_group_name: Optional[str],
+                 default_parent_name: Optional[str],
                  force_list: bool,
-                 fields: Dict[str, Dict]):
+                 fields: List[Dict[str, Dict]]):
         super().__init__(engine, children)
         self.field_infos = fields
-        self.fields_group_name = fields_group_name
-        self.parent_fields_group_name = parent_fields_group_name
+        self.default_parent_name = default_parent_name
         self.force_list = force_list
 
         result_meta = ResultMeta()
-        result_meta.fields_group_name = fields_group_name
-        result_meta.group_to_parent_group_name_map = {
-            fields_group_name: parent_fields_group_name}
+
+        fields_to_parent_fields_name_map = {}
+        for field in fields:
+            fields_to_parent_fields_name_map[field['name']] = field.get(
+                'parent_name', default_parent_name)
+
+        result_meta.fields_to_parent_fields_name_map = (
+            fields_to_parent_fields_name_map)
+
         result_meta.force_list = force_list
         self.result_meta = result_meta
 
