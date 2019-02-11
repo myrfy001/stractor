@@ -6,19 +6,19 @@ from collections import defaultdict
 
 
 class TireNodeNoData:
-    pass
+    __slots__ = ()
 
 
 class TrieTreeNode(defaultdict):
 
-    __slot__ = ('has_data')
+    __slots__ = ('data', 'node_meta')
 
     def __init__(self):
         super().__init__(TrieTreeNode)
         self.data = TireNodeNoData
         self.node_meta = None
 
-    def set_node_meta(self, value: Dict):
+    def set_node_meta(self, value: Any):
         # Node Meta can only be set once
         self.node_meta = self.node_meta or value
 

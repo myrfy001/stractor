@@ -4,12 +4,15 @@ from . import DomAccessComponentBase
 from stractor.utils.dom_modifier import drop_tree, drop_tag
 from stractor.component_registry import component_registry
 from stractor.extract_context import ExtractContext
+from stractor.wrappers import DomWrapper
+from stractor.engine import ExtractEngine
+from stractor.components.selectors import SelectorBase
 
 
 class ComponentDomShaver(DomAccessComponentBase):
 
     @classmethod
-    def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
+    def create_from_config(cls, config: Dict, engine: ExtractEngine):
         children = config.pop('children', [])
         selectors_instances = cls.create_selectors_from_config(
             config.pop('selectors', []))
@@ -19,18 +22,18 @@ class ComponentDomShaver(DomAccessComponentBase):
         return component
 
     def __init__(self,
-                 engine: 'ExtractEngine',
+                 engine: ExtractEngine,
                  children: List[str],
-                 selectors: List['SelectorBase'],
+                 selectors: List[SelectorBase],
                  action='keep'):
         super().__init__(engine, children)
         self.selectors = selectors
         self.action = action
 
     def _process(self,
-                 domwrp: 'DomWrapper',
+                 domwrp: DomWrapper,
                  call_path: Tuple,
-                 extract_context: ExtractContext)-> List['DomWrapper']:
+                 extract_context: ExtractContext)-> List[DomWrapper]:
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
 
@@ -46,16 +49,16 @@ class ComponentDomShaver(DomAccessComponentBase):
             self._remove_tree_or_tag(domwrp, drop_tag)
         return [domwrp]
 
-    def _remove_tree_or_tag(self, domwrp: 'DomWrapper', action: Callable):
-        input_dom = domwrp.dom
+    def _remove_tree_or_tag(self, domwrp: DomWrapper, action: Callable):
+        input_dom = domwrp.data
         selected = []
         for selector in self.selectors:
             selected.extend(selector.process(input_dom))
         for dom in selected:
             action(dom)
 
-    def _keep_tree(self, domwrp: 'DomWrapper'):
-        input_dom = domwrp.dom
+    def _keep_tree(self, domwrp: DomWrapper):
+        input_dom = domwrp.data
         nodes_on_path_to_root = set()
         for selector in self.selectors:
             sels = selector.process(input_dom)

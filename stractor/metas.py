@@ -1,7 +1,15 @@
 # coding:utf-8
 
 
-class ResultMeta:
+class MetaBase:
+    pass
+
+
+class DomMeta(MetaBase):
+    __slots__ = ()
+
+
+class ResultMeta(MetaBase):
 
     __slots__ = ('_fields_group_name',
                  '_force_list', '_has_merged_data')

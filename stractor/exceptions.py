@@ -3,3 +3,7 @@
 
 class MissingFieldError(Exception):
     pass
+
+
+class NameContainsIllegalChar(Exception):
+    pass

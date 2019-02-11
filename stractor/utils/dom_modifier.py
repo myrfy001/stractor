@@ -1,4 +1,9 @@
 # coding:utf-8
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lxml.etree import _Element  # noqa: F401
+
 basestring = (str, bytes)
 
 

@@ -5,10 +5,13 @@ from collections.abc import Mapping
 from copy import copy
 from itertools import groupby
 
-from typing import Optional
+from typing import Optional, Tuple, Any
 
-from stractor.utils.trie_tree import TrieTreeWithMetaData, TrieTreeNode
-from stractor.result_meta import ResultMeta
+from lxml.etree import _Element
+
+from stractor.trie_tree import TrieTreeWithMetaData, TrieTreeNode
+from stractor.wrappers import DomWrapper, ResultWrapper
+from stractor.metas import ResultMeta
 
 
 class TupleKeyToStrings(json.JSONEncoder):
@@ -27,11 +30,20 @@ class TupleKeyToStrings(json.JSONEncoder):
 
 
 class ExtractContext:
-    def __init__(self):
+    def __init__(self, is_debug=False):
         self.trie_tree = TrieTreeWithMetaData()
+        self.debug_trie_tree = TrieTreeWithMetaData()
+        self.is_debug = is_debug
 
-    def add_item(self, path, value, value_meta):
-        self.trie_tree.add_item(path, value, value_meta)
+    def add_item(self, result_wrapper: ResultWrapper):
+        self.trie_tree.add_item(
+            result_wrapper.call_path,
+            result_wrapper.data,
+            result_wrapper.meta)
+
+    def add_debug_item(self, path: Tuple, value: Any, meta: Any):
+        if self.is_debug:
+            self.debug_trie_tree.add_item(path, value, meta)
 
     def export_result(self):
         import json
@@ -40,6 +52,7 @@ class ExtractContext:
         print('===========')
         print(json.dumps(new_tree.root, cls=TupleKeyToStrings))
         print('>>>>>>>>>>>>>>')
+
         # return self.trie_tree.root
         return self._export_result(new_tree.root).data
 
@@ -81,12 +94,10 @@ class ExtractContext:
 
         def get_idx_key(x): return x[0][0]
 
-        new_group_to_parent_group_name_map = {}
         data_children = []
         for child_name, child in root.items():
             child_ret = cls._export_result(child)
             data_children.append((child_name, child_ret))
-            node_meta = child_ret.node_meta
 
         if not data_children:
             # Don't have any child, reached leaf, return
@@ -94,10 +105,10 @@ class ExtractContext:
 
         data_children.sort()
 
-        final_result = defaultdict(list)
+        final_result: defaultdict = defaultdict(list)
         meta_opt_force_list = True
         for idx_grp_key, idx_grp in groupby(data_children, key=get_idx_key):
-            buf = defaultdict(OrderedDict)
+            buf: defaultdict = defaultdict(OrderedDict)
             print('new buf', idx_grp_key)
             merged_members = []
             unmerged_members = []
@@ -145,4 +156,32 @@ class ExtractContext:
         result.set_node_meta(result_meta)
         print('This Level Result >>>>>>>>>>>>>>>>>>>>>>')
         print(json.dumps(final_result))
+        return result
+
+    def export_debug_result(self):
+
+        print('======DEBUG=======')
+        print(json.dumps(self._export_debug_result(
+            self.debug_trie_tree.root), cls=TupleKeyToStrings))
+        print('<<<<<<<<<<<<<<<<<')
+
+    def _export_debug_result(self, root):
+
+        data_result = []
+        if root.has_data:
+            if isinstance(root.data, DomWrapper):
+                data_result.append(root.data.to_html())
+            elif isinstance(root.data, ResultWrapper):
+                data_result.append(root.data.data)
+            else:
+                print('root.data', type(root.data))
+
+        child_results = {}
+        for k, v in root.items():
+            child_results[k] = self._export_debug_result(v)
+
+        result = {
+            'data': data_result,
+            'children': child_results
+        }
         return result

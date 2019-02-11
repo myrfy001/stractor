@@ -374,7 +374,7 @@ if __name__ == '__main__':
                 <img class="grid4" src="https://www.ear0.com/public/images/cc.jpg" />
                 <i class="iconfont icon-cc_by fl"></i>
             </a>
-        
+
         <a class="grid5 btn fr" href="javascript:void(0);" onclick="downloadSound(17000);"><i class="iconfont icon-download"></i> 下载</a>
         <div class="clear mb20"></div>
         <div class="info_box sound_info">
@@ -423,7 +423,7 @@ if __name__ == '__main__':
     </div>
 
     <div class="sound_content">
-        
+
 <p>关闭、打开金属门</p>
     </div>
 

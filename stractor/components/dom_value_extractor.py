@@ -4,17 +4,18 @@ from typing import List, Tuple, Dict, Union, Callable, Optional
 from . import DomAccessComponentBase
 from stractor.utils.dom_modifier import drop_tree, drop_tag
 from stractor.utils.type_convertor import convert_to_type
-from stractor.extract_context import ExtractContext
-from stractor.dom_wrapper import DomWrapper
+from stractor.extract_context import ExtractContext, ResultWrapper
+from stractor.wrappers import DomWrapper
 from stractor.component_registry import component_registry
 from stractor.exceptions import MissingFieldError
-from stractor.result_meta import ResultMeta
+from stractor.metas import ResultMeta
+from stractor.engine import ExtractEngine
 
 
 class ComponentBasicDomValueExtractor(DomAccessComponentBase):
 
     @classmethod
-    def create_from_config(cls, config: Dict, engine: 'ExtractEngine'):
+    def create_from_config(cls, config: Dict, engine: ExtractEngine):
         children = config.pop('children', [])
         fields_group_name = config.pop('fields_group_name', None)
         force_list = config.pop('force_list', True)
@@ -29,7 +30,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
         return component
 
     def __init__(self,
-                 engine: 'ExtractEngine',
+                 engine: ExtractEngine,
                  children: List[str],
                  fields_group_name: Optional[str],
                  force_list: bool,
@@ -45,14 +46,14 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
         self.result_meta = result_meta
 
     def _process(self,
-                 domwrp: 'DomWrapper',
+                 domwrp: DomWrapper,
                  call_path: Tuple,
-                 extract_context: ExtractContext)-> 'DomWrapper':
+                 extract_context: ExtractContext)-> List[ResultWrapper]:
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
         try:
             result = OrderedDict()
-            input_dom = domwrp.dom
+            input_dom = domwrp.data
 
             for field_info in self.field_infos:
                 field_name = field_info['name']
@@ -79,6 +80,11 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
 
         finally:
             # Because at trie tree processing stage, the order and count of the results is very important for merging fields, we must make sure that no matter
-            print(call_path, result)
-            extract_context.add_item(call_path, result, self.result_meta)
-            return result
+            return [
+                ResultWrapper(
+                    call_path=call_path,
+                    data=result,
+                    meta=self.result_meta,
+                    is_shared=self.output_is_shared,
+                    clone=False)
+            ]

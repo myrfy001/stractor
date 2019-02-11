@@ -1,7 +1,7 @@
 # coding:utf-8
 
 from typing import List, Dict
-from lxml.etree import XPath
+from lxml.etree import XPath, _Element
 from . import SelectorBase
 
 
@@ -14,5 +14,5 @@ class XpathSelector(SelectorBase):
     def __init__(self, rule: str):
         self.xpath = XPath(rule)
 
-    def process(self, dom: '_Element') -> List:
+    def process(self, dom: _Element) -> List:
         return self.xpath(dom)

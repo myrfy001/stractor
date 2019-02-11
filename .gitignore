@@ -3,3 +3,5 @@ __cache__
 .vscode
 .DS_Store
 *.egg-info
+.mypy_cache
+.pytest_cache
