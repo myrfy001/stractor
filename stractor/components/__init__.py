@@ -57,8 +57,7 @@ class DomAccessComponentBase(ComponentBase):
 
             extract_context.add_debug_item(
                 call_path,
-                processed_result,
-                processed_result.meta)
+                processed_result)
 
         for child in self.children:
             child_proc = self.engine.processors[child]

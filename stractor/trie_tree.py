@@ -5,28 +5,23 @@ from typing import Iterable, Hashable, Any, Dict, Optional
 from collections import defaultdict
 
 
-class TireNodeNoData:
+class TireNodeNoValue:
+    call_path = ()
     __slots__ = ()
 
 
 class TrieTreeNode(defaultdict):
 
-    __slots__ = ('data', 'node_meta')
+    __slots__ = ('node_val',)
 
     def __init__(self):
         super().__init__(TrieTreeNode)
-        self.data = TireNodeNoData
-        self.node_meta = None
-
-    def set_node_meta(self, value: Any):
-        # Node Meta can only be set once
-        self.node_meta = self.node_meta or value
+        self.node_val = TireNodeNoValue
 
     def replace_with_another_node(self, another: 'TrieTreeNode'):
         self.clear()
         self.update(another)
-        self.data = another.data
-        self.node_meta = another.node_meta
+        self.node_val = another.node_val
 
     def shortcut_child(self, child_key: Hashable):
         child = self[child_key]
@@ -88,7 +83,7 @@ class TrieTreeNode(defaultdict):
 
         child_can_be_shortcut_names = []
         for child_name, child in self.items():
-            if (not child.has_data) and len(child) == 1:
+            if (not child.has_val) and len(child) == 1:
                 child_can_be_shortcut_names.append(child_name)
 
         for child_to_be_shortcut_name in child_can_be_shortcut_names:
@@ -99,26 +94,24 @@ class TrieTreeNode(defaultdict):
             self[name] = value
 
     @property
-    def has_data(self):
-        return (self.data is not TireNodeNoData)
+    def has_val(self):
+        return (self.node_val is not TireNodeNoValue)
 
     @property
     def is_passthrough_node(self):
-        return (not self.has_data and len(self) == 1)
+        return (not self.has_val and len(self) == 1)
 
 
-class TrieTreeWithMetaData:
+class TrieTree:
 
     def __init__(self):
         self.root = TrieTreeNode()
 
     def add_item(self,
                  prefixs: Iterable[Hashable],
-                 value: Any,
-                 node_meta: Optional[Any]):
+                 value: Any):
 
         current_node = self.root
         for prefix in prefixs:
             current_node = current_node[prefix]
-        current_node.data = value
-        current_node.set_node_meta(node_meta)
+        current_node.node_val = value

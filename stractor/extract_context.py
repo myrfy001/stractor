@@ -9,7 +9,7 @@ from typing import Optional, Tuple, Any
 
 from lxml.etree import _Element
 
-from stractor.trie_tree import TrieTreeWithMetaData, TrieTreeNode
+from stractor.trie_tree import TrieTree, TrieTreeNode
 from stractor.wrappers import DomWrapper, ResultWrapper
 from stractor.metas import ResultMeta
 
@@ -31,19 +31,18 @@ class TupleKeyToStrings(json.JSONEncoder):
 
 class ExtractContext:
     def __init__(self, is_debug=False):
-        self.trie_tree = TrieTreeWithMetaData()
-        self.debug_trie_tree = TrieTreeWithMetaData()
+        self.trie_tree = TrieTree()
+        self.debug_trie_tree = TrieTree()
         self.is_debug = is_debug
 
     def add_item(self, result_wrapper: ResultWrapper):
         self.trie_tree.add_item(
             result_wrapper.call_path,
-            result_wrapper.data,
-            result_wrapper.meta)
+            result_wrapper)
 
-    def add_debug_item(self, path: Tuple, value: Any, meta: Any):
+    def add_debug_item(self, path: Tuple, value: Any):
         if self.is_debug:
-            self.debug_trie_tree.add_item(path, value, meta)
+            self.debug_trie_tree.add_item(path, value)
 
     def export_result(self):
         import json
@@ -54,12 +53,11 @@ class ExtractContext:
         print('>>>>>>>>>>>>>>')
 
         # return self.trie_tree.root
-        return self._export_result(new_tree.root).data
+        return self._export_result(new_tree.root).node_val.data
 
     def _create_shortcut_tree(self, root: TrieTreeNode):
         new_node = TrieTreeNode()
-        new_node.data = root.data
-        new_node.node_meta = root.node_meta
+        new_node.node_val = root.node_val
 
         for child_name, child in root.items():
             if child.is_passthrough_node:
@@ -85,7 +83,7 @@ class ExtractContext:
             else:
                 break
         # second step, process other parts of the tree
-        new_tree = TrieTreeWithMetaData()
+        new_tree = TrieTree()
         new_tree.root = self._create_shortcut_tree(root)
         return new_tree
 
@@ -114,7 +112,7 @@ class ExtractContext:
             unmerged_members = []
             for idx_group_member_tuple in idx_grp:
                 member_trie_key, group_member = idx_group_member_tuple
-                if group_member.node_meta.has_merged_data:
+                if group_member.node_val.meta.has_merged_data:
                     merged_members.append(group_member)
                 else:
                     unmerged_members.append(group_member)
@@ -122,20 +120,23 @@ class ExtractContext:
                 # force_list defaults to True, if any one set it to Flase, then
                 # the value should be False
                 meta_opt_force_list = (
-                    meta_opt_force_list and group_member.node_meta.force_list)
+                    meta_opt_force_list and
+                    group_member.node_val.meta.force_list)
 
             for group_member in unmerged_members:
                 # unmerged members should be processed first because merged
                 # members may be child of them
-                fields_group_name = group_member.node_meta.fields_group_name
+                fields_group_name = (
+                    group_member.node_val.meta.fields_group_name)
                 if fields_group_name:
-                    buf[group_member.node_meta.fields_group_name
-                        ].update(group_member.data)
+                    buf[group_member.node_val.meta.fields_group_name
+                        ].update(group_member.node_val.data)
                 else:
-                    buf.update(group_member.data)
+                    buf.update(group_member.node_val.data)
 
             for group_member in merged_members:
-                for child_grp_name, child_grp in group_member.data.items():
+                for child_grp_name, child_grp in (
+                        group_member.node_val.data.items()):
                     if child_grp_name in buf:
                         buf[child_grp_name][child_grp_name] = child_grp
                     else:
@@ -150,10 +151,10 @@ class ExtractContext:
                     final_result[group_name] = group[0]
 
         result = TrieTreeNode()
-        result.data = final_result
         result_meta = ResultMeta()
         result_meta.has_merged_data = True
-        result.set_node_meta(result_meta)
+        result.node_val = ResultWrapper(
+            final_result, root.node_val.call_path, result_meta, False, False)
         print('This Level Result >>>>>>>>>>>>>>>>>>>>>>')
         print(json.dumps(final_result))
         return result
@@ -168,13 +169,13 @@ class ExtractContext:
     def _export_debug_result(self, root):
 
         data_result = []
-        if root.has_data:
-            if isinstance(root.data, DomWrapper):
-                data_result.append(root.data.to_html())
-            elif isinstance(root.data, ResultWrapper):
-                data_result.append(root.data.data)
+        if root.has_val:
+            if isinstance(root.node_val, DomWrapper):
+                data_result.append(root.node_val.to_html())
+            elif isinstance(root.node_val, ResultWrapper):
+                data_result.append(root.node_val.data)
             else:
-                print('root.data', type(root.data))
+                print('root.data', type(root.node_val))
 
         child_results = {}
         for k, v in root.items():
