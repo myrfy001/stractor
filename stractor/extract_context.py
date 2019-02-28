@@ -105,6 +105,7 @@ class ExtractContext:
 
         final_result: defaultdict = defaultdict(list)
         meta_opt_force_list = True
+        meta_opt_merge_conflict = None
         for idx_grp_key, idx_grp in groupby(data_children, key=get_idx_key):
             buf: defaultdict = defaultdict(OrderedDict)
             print('new buf', idx_grp_key)
@@ -123,14 +124,18 @@ class ExtractContext:
                     meta_opt_force_list and
                     group_member.node_val.meta.force_list)
 
+                # meta_opt_merge_conflict use the first setting
+                meta_opt_merge_conflict = (
+                    meta_opt_merge_conflict or
+                    group_member.node_val.meta.merge_conflict)
+
             for group_member in unmerged_members:
                 # unmerged members should be processed first because merged
                 # members may be child of them
                 fields_group_name = (
                     group_member.node_val.meta.fields_group_name)
                 if fields_group_name:
-                    buf[group_member.node_val.meta.fields_group_name
-                        ].update(group_member.node_val.data)
+                    buf[fields_group_name].update(group_member.node_val.data)
                 else:
                     buf.update(group_member.node_val.data)
 
@@ -138,7 +143,21 @@ class ExtractContext:
                 for child_grp_name, child_grp in (
                         group_member.node_val.data.items()):
                     if child_grp_name in buf:
-                        buf[child_grp_name][child_grp_name] = child_grp
+                        if meta_opt_merge_conflict == 'recursive':
+                            new_item = buf[child_grp_name]
+                            if isinstance(new_item, Mapping):
+                                new_item[child_grp_name] = child_grp
+                            elif isinstance(new_item, list):
+                                new_item.append(child_grp)
+                        elif meta_opt_merge_conflict == 'merge':
+                            new_item = buf[child_grp_name]
+                            if isinstance(new_item, Mapping):
+                                new_item.update(child_grp)
+                            elif isinstance(new_item, list):
+                                new_item.append(child_grp)
+                        elif meta_opt_merge_conflict == 'replace':
+                            buf[child_grp_name] = child_grp
+
                     else:
                         buf[child_grp_name] = child_grp
 
@@ -166,7 +185,7 @@ class ExtractContext:
             self.debug_trie_tree.root), cls=TupleKeyToStrings))
         print('<<<<<<<<<<<<<<<<<')
 
-    def _export_debug_result(self, root):
+    def _export_debug_result(self, root: TrieTreeNode):
 
         data_result = []
         if root.has_val:

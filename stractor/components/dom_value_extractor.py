@@ -18,6 +18,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     def create_from_config(cls, config: Dict, engine: ExtractEngine):
         children = config.pop('children', [])
         fields_group_name = config.pop('fields_group_name', None)
+        merge_conflict = config.pop('merge_conflict', 'recursive')
         force_list = config.pop('force_list', True)
         field_cfgs = config['fields']
         for field_cfg in field_cfgs:
@@ -26,6 +27,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
             field_cfg['selectors'] = selectors_instances
         component = cls(engine, children,
                         fields_group_name,
+                        merge_conflict,
                         force_list, field_cfgs)
         return component
 
@@ -33,15 +35,18 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
                  engine: ExtractEngine,
                  children: List[str],
                  fields_group_name: Optional[str],
+                 merge_conflict: str,
                  force_list: bool,
                  fields: List[Dict[str, Dict]]):
         super().__init__(engine, children)
         self.field_infos = fields
         self.fields_group_name = fields_group_name
+        self.merge_conflict = merge_conflict
         self.force_list = force_list
 
         result_meta = ResultMeta()
         result_meta.fields_group_name = fields_group_name
+        result_meta.merge_conflict = merge_conflict
         result_meta.force_list = force_list
         self.result_meta = result_meta
 

@@ -23,15 +23,6 @@ class TrieTreeNode(defaultdict):
         self.update(another)
         self.node_val = another.node_val
 
-    def shortcut_child(self, child_key: Hashable):
-        child = self[child_key]
-        if len(child) != 1:
-            raise Exception(
-                'Only a child with a single grandchild can be shortcut')
-        grandchild_key, grandchild = next(iter(child.items()))
-        del self[child_key]
-        self[grandchild_key] = grandchild
-
     @staticmethod
     def _get_shortcut_last_node(first_node: 'TrieTreeNode'):
         '''

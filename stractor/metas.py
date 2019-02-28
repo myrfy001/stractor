@@ -12,12 +12,15 @@ class DomMeta(MetaBase):
 class ResultMeta(MetaBase):
 
     __slots__ = ('_fields_group_name',
-                 '_force_list', '_has_merged_data')
+                 '_force_list', '_has_merged_data', '_merge_conflict')
 
     def __init__(self):
-        self._fields_group_name = {}
+        self._fields_group_name = None
         self._force_list = True
         self._has_merged_data = False
+
+        # can be 'recursive', 'replace', 'merge', 'ignore'
+        self._merge_conflict = 'recursive'
 
     @property
     def fields_group_name(self):
@@ -26,6 +29,14 @@ class ResultMeta(MetaBase):
     @fields_group_name.setter
     def fields_group_name(self, v):
         self._fields_group_name = v
+
+    @property
+    def merge_conflict(self):
+        return self._merge_conflict
+
+    @merge_conflict.setter
+    def merge_conflict(self, v):
+        self._merge_conflict = v
 
     @property
     def force_list(self):
