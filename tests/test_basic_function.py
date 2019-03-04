@@ -60,14 +60,15 @@ def test_basic_flow():
     config = """
     {
         "entry": "pn1",
-        "processors":{
-            "pn1":{
+        "processors":[
+            {
+                "id":"pn1",
                 "name": "选中Html",
-                "!component":"ComponentDomSelector",
+                "component":"ComponentDomSelector",
                 "params":{
                     "selectors":[
                         {
-                            "!component": "XpathSelector",
+                            "component": "XpathSelector",
                             "params":{
                                 "rule":"/html"
                             }
@@ -76,13 +77,14 @@ def test_basic_flow():
                     "children":["p0"]
                 }
             },
-            "p0":{
+            {
+                "id": "p0",
                 "name": "选中Body",
-                "!component":"ComponentDomSelector",
+                "component":"ComponentDomSelector",
                 "params":{
                     "selectors":[
                         {
-                            "!component": "XpathSelector",
+                            "component": "XpathSelector",
                             "params":{
                                 "rule":"//body/o"
                             }
@@ -91,13 +93,14 @@ def test_basic_flow():
                     "children":["p1", "p3"]
                 }
             },
-            "p1":{
+            {
+                "id":"p1",
                 "name":"递归抽取C标签",
-                "!component": "ComponentDomSelector",
+                "component": "ComponentDomSelector",
                 "params":{
                     "selectors":[
                         {
-                            "!component": "XpathSelector",
+                            "component": "XpathSelector",
                             "params":{
                                 "rule":"./c"
                             }
@@ -106,9 +109,10 @@ def test_basic_flow():
                     "children":["p2-0", "p2-1", "p1"]
                 }
             },
-            "p2-0":{
+            {
+                "id": "p2-0",
                 "name":"评论抽取器",
-                "!component": "ComponentBasicDomValueExtractor",
+                "component": "ComponentBasicDomValueExtractor",
                 "params":{
                     "fields_group_name":"comments",
                     "fields":[
@@ -120,7 +124,7 @@ def test_basic_flow():
                             "allow_missing": true,
                             "selectors":[
                                 {
-                                    "!component": "XpathSelector",
+                                    "component": "XpathSelector",
                                     "params":{
                                         "rule":"./t/text()"
                                     }
@@ -130,13 +134,14 @@ def test_basic_flow():
                     ]
                 }
             },
-            "p2-1":{
+            {
+                "id":"p2-1",
                 "name": "评论点赞div标签删除器",
-                "!component":"ComponentDomSelector",
+                "component":"ComponentDomSelector",
                 "params":{
                     "selectors":[
                         {
-                            "!component": "XpathSelector",
+                            "component": "XpathSelector",
                             "params":{
                                 "rule":"./div/like"
                             }
@@ -145,9 +150,10 @@ def test_basic_flow():
                     "children":["p2-1-0"]
                 }
             },
-            "p2-1-0":{
+            {
+                "id":"p2-1-0",
                 "name":"点赞数抽取器",
-                "!component": "ComponentBasicDomValueExtractor",
+                "component": "ComponentBasicDomValueExtractor",
                 "params":{
                     "fields_group_name":"comments",
                     "fields":[
@@ -159,7 +165,7 @@ def test_basic_flow():
                             "allow_missing": true,
                             "selectors":[
                                 {
-                                    "!component": "XpathSelector",
+                                    "component": "XpathSelector",
                                     "params":{
                                         "rule":"./text()"
                                     }
@@ -169,9 +175,10 @@ def test_basic_flow():
                     ]
                 }
             },
-            "p3":{
+            {
+                "id":"p3",
                 "name":"文章抽取器",
-                "!component": "ComponentBasicDomValueExtractor",
+                "component": "ComponentBasicDomValueExtractor",
                 "params":{
                     "force_list": false,
                     "fields":[
@@ -183,7 +190,7 @@ def test_basic_flow():
                             "allow_missing": true,
                             "selectors":[
                                 {
-                                    "!component": "XpathSelector",
+                                    "component": "XpathSelector",
                                     "params":{
                                         "rule":"./article/text()"
                                     }
@@ -193,7 +200,7 @@ def test_basic_flow():
                     ]
                 }
             }
-        }
+        ]
     }
     """
 

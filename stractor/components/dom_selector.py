@@ -24,16 +24,12 @@ class ComponentDomSelector(DomAccessComponentBase):
 
     def __init__(self,
                  engine: ExtractEngine,
-                 children: List[str],
+                 children: List[Union[str, 'DomAccessComponentBase']],
                  selectors: List[SelectorBase]):
         super().__init__(engine, children)
         self.selectors = selectors
-        self.meta = DomMeta()
 
-    def _process(self,
-                 domwrp: DomWrapper,
-                 call_path: Tuple,
-                 extract_context: ExtractContext)-> List[DomWrapper]:
+    def process(self, domwrp: DomWrapper)-> List[DomWrapper]:
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
         input_dom = domwrp.data
@@ -43,6 +39,5 @@ class ComponentDomSelector(DomAccessComponentBase):
             for sel in sels:
                 result.append(
                     DomWrapper(
-                        sel, call_path, self.meta, self.output_is_shared,
-                        clone=True))
+                        sel, self.output_is_shared, clone=True))
         return result

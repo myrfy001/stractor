@@ -35,50 +35,12 @@ class DomAccessComponentBase(ComponentBase):
             for selector in selectors_cfg
         ]
 
-    def __init__(self, engine: ExtractEngine, children: List[str]):
+    def __init__(self, engine: ExtractEngine,
+                 children: List[Union[str, 'DomAccessComponentBase']]):
         self.engine = engine
         self.children = children
         self.output_is_shared = len(self.children) > 1
         self.name = None
 
-    def process(self, valwrps: Union[DomWrapper, ResultWrapper],
-                call_path: Tuple,
-                extract_context: ExtractContext):
-        processed_results = self._process(valwrps, call_path, extract_context)
-
-        for processed_result in processed_results:
-            # only leaf node can save result to extract context
-            # in some case, process can modify the extract context by
-            # itself and return None, in that case, we won't add the
-            # result again
-            if (not self.children) and isinstance(
-                    processed_result, ResultWrapper):
-                extract_context.add_item(processed_result)
-
-            extract_context.add_debug_item(
-                call_path,
-                processed_result)
-
-        for child in self.children:
-            child_proc = self.engine.processors[child]
-            new_path_level = uid_counter.get_next_str() + ':' + child_proc.name
-            for idx, processed_result in enumerate(processed_results):
-                child_proc.process(
-                    processed_result,
-                    # the format of call_path is designed for sorting in
-                    # merging step, idx is used for grouping items, each idx
-                    # will be an item in the resulting list. Items with the
-                    # same idx will be berged into a dict, because
-                    # new_path_level is monotonic and is the secondary sorting
-                    # key, the merging order is same with the extraction order
-                    call_path + ((idx, new_path_level),),
-                    extract_context)
-
-    def _process(self,
-                 valwrp: Union[DomWrapper, ResultWrapper],
-                 call_path: Tuple,
-                 extract_context: ExtractContext
-                 ) -> Union[DomWrapper, ResultWrapper]:
-        # Process function should be idempotent, because _process will be
-        # called on a single instance for multi times
+    def process(self, valwrps: Union[DomWrapper, ResultWrapper]):
         raise NotImplementedError()

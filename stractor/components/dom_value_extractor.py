@@ -33,7 +33,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
 
     def __init__(self,
                  engine: ExtractEngine,
-                 children: List[str],
+                 children: List[Union[str, 'DomAccessComponentBase']],
                  fields_group_name: Optional[str],
                  merge_conflict: str,
                  force_list: bool,
@@ -50,10 +50,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
         result_meta.force_list = force_list
         self.result_meta = result_meta
 
-    def _process(self,
-                 domwrp: DomWrapper,
-                 call_path: Tuple,
-                 extract_context: ExtractContext)-> List[ResultWrapper]:
+    def process(self, domwrp: DomWrapper)-> List[ResultWrapper]:
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
         try:
@@ -85,11 +82,4 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
 
         finally:
             # Because at trie tree processing stage, the order and count of the results is very important for merging fields, we must make sure that no matter
-            return [
-                ResultWrapper(
-                    call_path=call_path,
-                    data=result,
-                    meta=self.result_meta,
-                    is_shared=self.output_is_shared,
-                    clone=False)
-            ]
+            return [result]
