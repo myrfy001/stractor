@@ -98,6 +98,7 @@ def test_basic_flow():
                 "name":"递归抽取C标签",
                 "component": "ComponentDomSelector",
                 "params":{
+                    "group_name":"comments",
                     "selectors":[
                         {
                             "component": "XpathSelector",
@@ -114,7 +115,6 @@ def test_basic_flow():
                 "name":"评论抽取器",
                 "component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "fields_group_name":"comments",
                     "fields":[
                         {
                             "name": "comment_text",
@@ -155,7 +155,6 @@ def test_basic_flow():
                 "name":"点赞数抽取器",
                 "component": "ComponentBasicDomValueExtractor",
                 "params":{
-                    "fields_group_name":"comments",
                     "fields":[
                         {
                             "name": "comment_like",
@@ -245,7 +244,6 @@ def test_basic_flow():
     extract_engine_factory = ExtractEngineFactory()
     engine = extract_engine_factory.create_engine_from_config(config)
     engine.is_debug = True
-    extract_ctx = engine.extract(html)
-    result = extract_ctx.export_result()
+    result = engine.extract(html)
     print(json.dumps(result))
-    extract_ctx.export_debug_result()
+    # extract_ctx.export_debug_result()

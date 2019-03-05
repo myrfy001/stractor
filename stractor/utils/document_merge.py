@@ -13,6 +13,14 @@ class ConflictAction:
     NEW_LIST = 4
 
 
+conflict_enum_map = {
+    'recursive': ConflictAction.RECURSIVE,
+    'replace': ConflictAction.REPLACE,
+    'skip': ConflictAction.SKIP,
+    'new_list': ConflictAction.NEW_LIST
+}
+
+
 def merge_doc(doc1: DocumentTyoe,
               doc2: DocumentTyoe,
               conflict: ConflictAction = ConflictAction.RECURSIVE):

@@ -2,16 +2,15 @@
 from typing import Dict, Type
 from lxml import etree
 from html5_parser import parse
+from itertools import zip_longest
 
 from stractor.wrappers import DomWrapper
 from stractor.component_registry import (
     component_registry, component_from_config)
-from stractor.extract_context import ExtractContext
 from stractor.utils.dom_modifier import add_id_to_all_node
 from stractor.utils.validators import validate_component_name
 from stractor.utils.document_merge import merge_doc
 from stractor.exceptions import NameContainsIllegalChar
-from stractor.metas import DomMeta
 
 
 class ExtractEngine:
@@ -30,55 +29,88 @@ class ExtractEngine:
         entry_dom_is_shared = len(entry_processor.children) > 1
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
 
-        result_stack = []
-        step_stack = [[entry_processor, domwrp, None]]
-
+        children_result_buf = []
+        final_result = []
+        step_stack = [[entry_processor,
+                       domwrp,
+                       final_result,
+                       children_result_buf]]
+        last_pop = None
         while step_stack:
+
             stack_top = step_stack[-1]
-            cur_proc, cur_input, execute_result = stack_top
+            (cur_proc,
+             cur_input,
+             parent_result_buf,
+             children_result_buf) = stack_top
 
-            print('--------------')
-            print(cur_proc.name)
-            for x in result_stack:
-                print(x)
-            if execute_result is None:
-                # first time visit this node
-                cur_proc_results = cur_proc.process(cur_input)
-                stack_top[2] = cur_proc_results
-                if not cur_proc_results:
-                    result_stack.append(None)
+            if cur_proc.children:
+                if last_pop is not cur_proc.children[-1]:
+                    # first time visit this node
+                    cur_proc_results = cur_proc.process(cur_input)
+                    if not cur_proc_results:
+                        # if can't extract anything, then no need to handle
+                        # child and we should return
+                        step_stack.pop()
+                        last_pop = cur_proc
+                        continue
 
-                if cur_proc.children:
                     # 中间结果
-                    for cur_proc_result in cur_proc_results:
-                        for child_proc in cur_proc.children[::-1]:
+                    new_children_result_buf = [
+                        [] for _ in range(len(cur_proc.children))]
+                    stack_top[3] = new_children_result_buf
+                    for cur_proc_result in reversed(cur_proc_results):
+                        for idx, child_proc in enumerate(
+                                reversed(cur_proc.children)):
                             step_stack.append(
-                                [child_proc, cur_proc_result, None])
+                                [child_proc,
+                                 cur_proc_result,
+                                 new_children_result_buf[-idx-1],
+                                 None])
                 else:
-                    # 最终结果
-                    result_stack.append(cur_proc_results)
+                    # Merge
+                    last_pop, _, _, children_result_buf = step_stack.pop()
 
-            else:
+                    if len(last_pop.children) == 1:
+                        parent_result_buf.extend(children_result_buf[0])
+                        continue
+
+                    result = []
+                    for items_to_merge in zip_longest(*children_result_buf):
+                        first_item = None
+                        for item in items_to_merge:
+                            if item is None:
+                                continue
+                            if first_item is None:
+                                first_item = item
+                                continue
+                            first_item = merge_doc(
+                                first_item, item, cur_proc.merge_conflict)
+                        result.append(first_item)
+
+                    if not cur_proc.force_list and len(result) == 1:
+                        result = result[0]
+
+                    if cur_proc.group_name is not None:
+                        result = {cur_proc.group_name: result}
+                    parent_result_buf.append(result)
+
+            elif not cur_proc.children:
+                # 最终结果
                 step_stack.pop()
-                if len(cur_proc.children) == 1:
-                    continue
-                first_result = None
-                for _ in range(len(cur_proc.children)):
-                    if first_result is None:
-                        first_result = result_stack.pop()
-                        continue
-                    other_result = result_stack.pop()
-                    if other_result is None:
-                        continue
+                last_pop = cur_proc
 
-                    print('merge', first_result, other_result)
+                cur_proc_results = cur_proc.process(cur_input)
+                for cur_proc_result in cur_proc_results:
+                    if cur_proc.group_name is not None:
+                        cur_proc_result = {
+                            cur_proc.group_name: cur_proc_result}
+                    parent_result_buf.append(cur_proc_result)
 
-                    first_result = merge_doc(first_result, other_result)
-
-                result_stack.append(first_result)
-
-        print(result_stack)
-        return result_stack.pop()
+        if isinstance(final_result[0], list) and len(final_result[0]) == 1:
+            return final_result[0][0]
+        else:
+            return final_result[0]
 
 
 class ExtractEngineFactory:

@@ -1,14 +1,13 @@
 # coding:utf-8
 from collections import OrderedDict
-from typing import List, Tuple, Dict, Union, Callable, Optional
+from typing import List, Tuple, Dict, Union, Callable, Optional, Any
 from . import DomAccessComponentBase
 from stractor.utils.dom_modifier import drop_tree, drop_tag
 from stractor.utils.type_convertor import convert_to_type
-from stractor.extract_context import ExtractContext, ResultWrapper
+from stractor.utils.document_merge import ConflictAction, conflict_enum_map
 from stractor.wrappers import DomWrapper
 from stractor.component_registry import component_registry
 from stractor.exceptions import MissingFieldError
-from stractor.metas import ResultMeta
 from stractor.engine import ExtractEngine
 
 
@@ -17,8 +16,9 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     @classmethod
     def create_from_config(cls, config: Dict, engine: ExtractEngine):
         children = config.pop('children', [])
-        fields_group_name = config.pop('fields_group_name', None)
-        merge_conflict = config.pop('merge_conflict', 'recursive')
+        group_name = config.pop('group_name', None)
+        merge_conflict = conflict_enum_map[
+            config.pop('merge_conflict', 'recursive')]
         force_list = config.pop('force_list', True)
         field_cfgs = config['fields']
         for field_cfg in field_cfgs:
@@ -26,7 +26,7 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
                 field_cfg.pop('selectors', []))
             field_cfg['selectors'] = selectors_instances
         component = cls(engine, children,
-                        fields_group_name,
+                        group_name,
                         merge_conflict,
                         force_list, field_cfgs)
         return component
@@ -34,52 +34,45 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
     def __init__(self,
                  engine: ExtractEngine,
                  children: List[Union[str, 'DomAccessComponentBase']],
-                 fields_group_name: Optional[str],
-                 merge_conflict: str,
+                 group_name: Optional[str],
+                 merge_conflict: ConflictAction,
                  force_list: bool,
                  fields: List[Dict[str, Dict]]):
         super().__init__(engine, children)
         self.field_infos = fields
-        self.fields_group_name = fields_group_name
+        self.group_name = group_name
         self.merge_conflict = merge_conflict
         self.force_list = force_list
 
-        result_meta = ResultMeta()
-        result_meta.fields_group_name = fields_group_name
-        result_meta.merge_conflict = merge_conflict
-        result_meta.force_list = force_list
-        self.result_meta = result_meta
-
-    def process(self, domwrp: DomWrapper)-> List[ResultWrapper]:
+    def process(self, domwrp: DomWrapper)-> List[Any]:
         # Process function should be idempotent, because _process will be
         # called on a single instance for multi times
-        try:
-            result = OrderedDict()
-            input_dom = domwrp.data
 
-            for field_info in self.field_infos:
-                field_name = field_info['name']
-                value_type = field_info['value_type']
-                selectors = field_info['selectors']
-                is_array = field_info['is_array']
-                result_buf = []
-                for selector in selectors:
-                    sels = selector.process(input_dom)
-                    result_buf.extend(sels)
-                if not result_buf:
-                    if field_info.get('allow_missing', True):
-                        result_buf.append(
-                            field_info.get('default_value', None))
-                    else:
-                        raise MissingFieldError()
-                result_buf = [convert_to_type(x, value_type)
-                              for x in result_buf]
+        # TODO use ordered dict, now only for test
+        result = OrderedDict()
+        # result = {}
+        input_dom = domwrp.data
 
-                # missing value is handled above
-                if not is_array:
-                    result_buf = result_buf[0]
-                result[field_name] = result_buf
+        for field_info in self.field_infos:
+            field_name = field_info['name']
+            value_type = field_info['value_type']
+            selectors = field_info['selectors']
+            is_array = field_info['is_array']
+            result_buf = []
+            for selector in selectors:
+                sels = selector.process(input_dom)
+                result_buf.extend(sels)
+            if not result_buf:
+                if field_info.get('allow_missing', True):
+                    result_buf.append(
+                        field_info.get('default_value', None))
+                else:
+                    raise MissingFieldError()
+            result_buf = [convert_to_type(x, value_type)
+                          for x in result_buf]
 
-        finally:
-            # Because at trie tree processing stage, the order and count of the results is very important for merging fields, we must make sure that no matter
+            # missing value is handled above
+            if not is_array:
+                result_buf = result_buf[0]
+            result[field_name] = result_buf
             return [result]
