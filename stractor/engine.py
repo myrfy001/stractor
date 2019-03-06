@@ -22,19 +22,26 @@ class ExtractEngine:
     def add_processor(self, id_, processor):
         self.processors[id_] = processor
 
-    def extract(self, html):
+    def extract(self, html, debug=False):
         dom = parse(html)
         add_id_to_all_node(dom)
         entry_processor = self.processors[self.entry_point]
         entry_dom_is_shared = len(entry_processor.children) > 1
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
 
+        debug_info = {}
+
         children_result_buf = []
         final_result = []
+        final_debug_ctx = {
+            'data': domwrp.to_html(),
+            'children': {}
+        }
         step_stack = [[entry_processor,
                        domwrp,
                        final_result,
-                       children_result_buf]]
+                       children_result_buf,
+                       final_debug_ctx]]
         last_pop = None
         while step_stack:
 
@@ -42,7 +49,8 @@ class ExtractEngine:
             (cur_proc,
              cur_input,
              parent_result_buf,
-             children_result_buf) = stack_top
+             children_result_buf,
+             debug_ctx) = stack_top
 
             if cur_proc.children:
                 if last_pop is not cur_proc.children[-1]:
@@ -58,18 +66,38 @@ class ExtractEngine:
                     # 中间结果
                     new_children_result_buf = [
                         [] for _ in range(len(cur_proc.children))]
+
                     stack_top[3] = new_children_result_buf
+                    print(debug_ctx)
+                    children_debug_ctx = debug_ctx.setdefault('children', {})
                     for cur_proc_result in reversed(cur_proc_results):
+
+                        if isinstance(cur_proc_result, DomWrapper):
+                            debug_data = cur_proc_result.to_html()
+                        else:
+                            debug_data = cur_proc_result
+
                         for idx, child_proc in enumerate(
                                 reversed(cur_proc.children)):
+                            debug_ctx['data'] = debug_data
+                            new_child_context = children_debug_ctx.setdefault(
+                                cur_proc.id_, [])
+
+                            tmp = {
+                                'data': debug_data,
+                                'children': {}
+                            }
+                            new_child_context.append(tmp)
+
                             step_stack.append(
                                 [child_proc,
                                  cur_proc_result,
                                  new_children_result_buf[-idx-1],
-                                 None])
+                                 None,
+                                 tmp])
                 else:
                     # Merge
-                    last_pop, _, _, children_result_buf = step_stack.pop()
+                    last_pop, _, _, children_result_buf, _ = step_stack.pop()
 
                     if len(last_pop.children) == 1:
                         parent_result_buf.extend(children_result_buf[0])
@@ -107,6 +135,8 @@ class ExtractEngine:
                             cur_proc.group_name: cur_proc_result}
                     parent_result_buf.append(cur_proc_result)
 
+        import json
+        print(json.dumps(final_debug_ctx))
         if isinstance(final_result[0], list) and len(final_result[0]) == 1:
             return final_result[0][0]
         else:
@@ -129,7 +159,7 @@ class ExtractEngineFactory:
             if not validate_component_name(proc_id):
                 raise NameContainsIllegalChar()
             proc = component_from_config(proc_cfg, engine=engine)
-            proc.name = proc_id
+            proc.id_ = proc_id
             engine.add_processor(proc_id, proc)
 
         # Convert the children name to children instance

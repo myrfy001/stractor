@@ -39,7 +39,7 @@ class DomAccessComponentBase(ComponentBase):
         self.engine = engine
         self.children = children
         self.output_is_shared = len(self.children) > 1
-        self.name = None
+        self.id_ = None
 
     def process(self, valwrps: Union[DomWrapper]):
         raise NotImplementedError()
