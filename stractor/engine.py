@@ -29,19 +29,18 @@ class ExtractEngine:
         entry_dom_is_shared = len(entry_processor.children) > 1
         domwrp = DomWrapper(dom, is_shared=entry_dom_is_shared, clone=False)
 
-        debug_info = {}
+        if debug:
+            debug_info = {id_: [] for id_ in self.processors}
+            debug_info[entry_processor.id_].append(domwrp.to_html())
+        else:
+            debug_info = None
 
         children_result_buf = []
         final_result = []
-        final_debug_ctx = {
-            'data': domwrp.to_html(),
-            'children': {}
-        }
         step_stack = [[entry_processor,
                        domwrp,
                        final_result,
-                       children_result_buf,
-                       final_debug_ctx]]
+                       children_result_buf]]
         last_pop = None
         while step_stack:
 
@@ -49,8 +48,7 @@ class ExtractEngine:
             (cur_proc,
              cur_input,
              parent_result_buf,
-             children_result_buf,
-             debug_ctx) = stack_top
+             children_result_buf) = stack_top
 
             if cur_proc.children:
                 if last_pop is not cur_proc.children[-1]:
@@ -66,38 +64,27 @@ class ExtractEngine:
                     # 中间结果
                     new_children_result_buf = [
                         [] for _ in range(len(cur_proc.children))]
-
                     stack_top[3] = new_children_result_buf
-                    print(debug_ctx)
-                    children_debug_ctx = debug_ctx.setdefault('children', {})
                     for cur_proc_result in reversed(cur_proc_results):
 
-                        if isinstance(cur_proc_result, DomWrapper):
-                            debug_data = cur_proc_result.to_html()
-                        else:
-                            debug_data = cur_proc_result
+                        if debug:
+                            if isinstance(cur_proc_result, DomWrapper):
+                                debug_data = cur_proc_result.to_html()
+                            else:
+                                debug_data = cur_proc_result
 
                         for idx, child_proc in enumerate(
                                 reversed(cur_proc.children)):
-                            debug_ctx['data'] = debug_data
-                            new_child_context = children_debug_ctx.setdefault(
-                                cur_proc.id_, [])
-
-                            tmp = {
-                                'data': debug_data,
-                                'children': {}
-                            }
-                            new_child_context.append(tmp)
-
                             step_stack.append(
                                 [child_proc,
                                  cur_proc_result,
                                  new_children_result_buf[-idx-1],
-                                 None,
-                                 tmp])
+                                 None])
+                            if debug:
+                                debug_info[child_proc.id_].append(debug_data)
                 else:
                     # Merge
-                    last_pop, _, _, children_result_buf, _ = step_stack.pop()
+                    last_pop, _, _, children_result_buf = step_stack.pop()
 
                     if len(last_pop.children) == 1:
                         parent_result_buf.extend(children_result_buf[0])
@@ -135,12 +122,10 @@ class ExtractEngine:
                             cur_proc.group_name: cur_proc_result}
                     parent_result_buf.append(cur_proc_result)
 
-        import json
-        print(json.dumps(final_debug_ctx))
         if isinstance(final_result[0], list) and len(final_result[0]) == 1:
-            return final_result[0][0]
+            return final_result[0][0], debug_info
         else:
-            return final_result[0]
+            return final_result[0], debug_info
 
 
 class ExtractEngineFactory:

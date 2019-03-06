@@ -244,6 +244,8 @@ def test_basic_flow():
     extract_engine_factory = ExtractEngineFactory()
     engine = extract_engine_factory.create_engine_from_config(config)
     engine.is_debug = True
-    result = engine.extract(html)
+    result, debug_info = engine.extract(html, debug=True)
+    print(json.dumps(debug_info))
+    print('--------------')
     print(json.dumps(result))
     # extract_ctx.export_debug_result()
