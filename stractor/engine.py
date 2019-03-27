@@ -86,6 +86,8 @@ class ExtractEngine:
                     # Merge
                     last_pop, _, _, children_result_buf = step_stack.pop()
 
+                    # For a pass through node, no merge is needed, so simply
+                    # pass result to upper level
                     if len(last_pop.children) == 1:
                         parent_result_buf.extend(children_result_buf[0])
                         continue
@@ -117,10 +119,18 @@ class ExtractEngine:
 
                 cur_proc_results = cur_proc.process(cur_input)
                 for cur_proc_result in cur_proc_results:
+                    if isinstance(cur_proc_result, DomWrapper):
+                        # When user is debugging a extract flow, some non-value
+                        # node may become the leaf node, so we should skip
+                        # these node
+                        continue
                     if cur_proc.group_name is not None:
                         cur_proc_result = {
                             cur_proc.group_name: cur_proc_result}
                     parent_result_buf.append(cur_proc_result)
+
+        if not final_result:
+            return {}, debug_info
 
         if isinstance(final_result[0], list) and len(final_result[0]) == 1:
             return final_result[0][0], debug_info
