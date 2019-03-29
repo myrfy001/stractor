@@ -21,4 +21,5 @@ class DomWrapper(FlowItemWrapperBase):
         return self.__class__(self.data, is_shared, True)
 
     def to_html(self):
-        return tostring(self.data).decode('utf-8')
+        return tostring(
+            self.data, method="html", encoding="utf-8").decode('utf-8')
