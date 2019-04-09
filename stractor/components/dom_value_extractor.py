@@ -75,4 +75,4 @@ class ComponentBasicDomValueExtractor(DomAccessComponentBase):
             if not is_array:
                 result_buf = result_buf[0]
             result[field_name] = result_buf
-            return [result]
+        return [result]

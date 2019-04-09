@@ -31,7 +31,7 @@ class ComponentDomShaver(DomAccessComponentBase):
                  merge_conflict: ConflictAction,
                  force_list: bool,
                  selectors: List[SelectorBase],
-                 action='keep'):
+                 action='del_tree'):
         super().__init__(engine, children)
         self.selectors = selectors
         self.action = action
@@ -61,6 +61,8 @@ class ComponentDomShaver(DomAccessComponentBase):
         for selector in self.selectors:
             selected.extend(selector.process(input_dom))
         for dom in selected:
+            if dom.getparent() is None:
+                continue
             action(dom)
 
     def _keep_tree(self, domwrp: DomWrapper):
